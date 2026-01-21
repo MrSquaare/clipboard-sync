@@ -4,6 +4,7 @@ export type RoomId = string;
 // --- Messages from Client to Server ---
 export type ClientMessage =
   | { type: "HELLO"; payload: { version: number } }
+  | { type: "PING" }
   | { type: "SIGNAL_OFFER"; targetId: PeerId; sdp: unknown }
   | { type: "SIGNAL_ANSWER"; targetId: PeerId; sdp: unknown }
   | { type: "SIGNAL_ICE"; targetId: PeerId; candidate: unknown }
@@ -12,6 +13,7 @@ export type ClientMessage =
 // --- Messages from Server to Client ---
 export type ServerMessage =
   | { type: "WELCOME"; payload: { myId: PeerId; peers: PeerId[] } }
+  | { type: "PONG" }
   | { type: "PEER_JOINED"; payload: { peerId: PeerId } }
   | { type: "PEER_LEFT"; payload: { peerId: PeerId } }
   | { type: "SIGNAL_OFFER"; senderId: PeerId; sdp: unknown }

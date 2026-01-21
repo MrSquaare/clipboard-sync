@@ -1,9 +1,12 @@
 import { Hono } from "hono";
+import { logger } from "hono/logger";
 import { ClipboardRoom } from "./infrastructure/ClipboardRoom";
 
 export { ClipboardRoom };
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
+
+app.use("*", logger());
 
 app.get("/", (c) => c.text("Clipboard Sync Relay Server Active"));
 

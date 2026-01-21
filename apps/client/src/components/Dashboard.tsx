@@ -3,8 +3,8 @@ import { useSettingsStore } from "../store/useSettingsStore";
 import { networkService } from "../services/NetworkService";
 
 export function Dashboard() {
-  const { myId, peers, logs } = useAppStore();
-  const { roomId, serverUrl } = useSettingsStore();
+  const { myId, clients, logs } = useAppStore();
+  const { roomId, serverUrl, developerMode } = useSettingsStore();
 
   return (
     <div className="dashboard">
@@ -21,14 +21,14 @@ export function Dashboard() {
         </button>
       </header>
 
-      <div className="grid-2">
+      <div className={`grid-2 ${developerMode ? "" : "full-width"}`}>
         <div className="card">
-          <h3>Peers ({peers.length})</h3>
-          {peers.length === 0 ? (
-            <p className="text-muted">No peers connected.</p>
+          <h3>Clients ({clients.length})</h3>
+          {clients.length === 0 ? (
+            <p className="text-muted">No clients connected.</p>
           ) : (
             <ul className="peer-list">
-              {peers.map((p) => (
+              {clients.map((p) => (
                 <li key={p.id} className="peer-item">
                   <span>{p.id.slice(0, 8)}...</span>
                   <span className={`badge ${p.status}`}>{p.status}</span>
@@ -39,19 +39,21 @@ export function Dashboard() {
           )}
         </div>
 
-        <div className="card">
-          <h3>Activity Log</h3>
-          <div className="log-container">
-            {logs.map((log) => (
-              <div key={log.id} className={`log-entry ${log.type}`}>
-                <span className="time">
-                  {new Date(log.timestamp).toLocaleTimeString()}
-                </span>
-                <span className="msg">{log.message}</span>
-              </div>
-            ))}
+        {developerMode && (
+          <div className="card">
+            <h3>Debug Log</h3>
+            <div className="log-container">
+              {logs.map((log) => (
+                <div key={log.id} className={`log-entry ${log.type}`}>
+                  <span className="time">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>
+                  <span className="msg">{log.message}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

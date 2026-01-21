@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "fr.mrsquaare.clipboard-sync",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm dev:ts",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "pnpm build:ts",
     "frontendDist": "../dist"
   },
   "app": {
@@ -14,7 +14,8 @@
       {
         "title": "client",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "devtools": true
       }
     ],
     "security": {

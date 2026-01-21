@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { ClientMessage, ServerMessage, PeerId } from "../types/protocol";
+import { logger } from "../utils/logger";
 
 interface SessionAttachment {
   id: PeerId;
@@ -24,7 +25,7 @@ export class ClipboardRoom extends DurableObject {
     // We also store the full metadata in the attachment
     server.serializeAttachment({ id: peerId });
 
-    console.log(`[Room] New peer connected: ${peerId}`);
+    logger.info(`[Room] New peer connected`, { peerId });
 
     // Get list of existing peers
     const peers = this.ctx
@@ -32,7 +33,10 @@ export class ClipboardRoom extends DurableObject {
       .map((ws) => (ws.deserializeAttachment() as SessionAttachment)?.id)
       .filter((id) => id && id !== peerId) as PeerId[];
 
-    console.log(`[Room] Current peers in room: ${peers.length}`);
+    logger.debug(`[Room] Current peers in room`, {
+      count: peers.length,
+      peers,
+    });
 
     this.send(server, {
       type: "WELCOME",
@@ -48,9 +52,13 @@ export class ClipboardRoom extends DurableObject {
 
     try {
       const msg = JSON.parse(message as string) as ClientMessage;
-      console.log(`[Room] RX from ${attachment.id}: ${msg.type}`);
+      logger.debug(`[Room] RX from ${attachment.id}: ${msg.type}`);
 
       switch (msg.type) {
+        case "PING":
+          this.send(ws, { type: "PONG" });
+          break;
+
         case "HELLO":
           this.broadcast(
             { type: "PEER_JOINED", payload: { peerId: attachment.id } },
@@ -94,7 +102,7 @@ export class ClipboardRoom extends DurableObject {
           break;
       }
     } catch (e) {
-      console.error("[Room] Error handling message:", e);
+      logger.error("[Room] Error handling message", { error: e });
     }
   }
 
@@ -106,7 +114,7 @@ export class ClipboardRoom extends DurableObject {
   ) {
     const attachment = ws.deserializeAttachment() as SessionAttachment;
     if (attachment) {
-      console.log(
+      logger.info(
         `[Room] Peer disconnected: ${attachment.id} (code=${code}, reason=${reason}, clean=${wasClean})`,
       );
       this.broadcast({ type: "PEER_LEFT", payload: { peerId: attachment.id } });
@@ -130,7 +138,7 @@ export class ClipboardRoom extends DurableObject {
         try {
           ws.send(str);
         } catch (e) {
-          console.error("[Room] Broadcast send failed", e);
+          logger.error("[Room] Broadcast send failed", { error: e });
         }
       }
     }
@@ -144,11 +152,11 @@ export class ClipboardRoom extends DurableObject {
         try {
           ws.send(str);
         } catch (e) {
-          console.error("[Room] Forward send failed", e);
+          logger.error("[Room] Forward send failed", { error: e });
         }
         return;
       }
     }
-    console.warn(`[Room] Target peer not found: ${targetId}`);
+    logger.warn(`[Room] Target peer not found: ${targetId}`);
   }
 }

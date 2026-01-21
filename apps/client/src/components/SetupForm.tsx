@@ -10,10 +10,17 @@ export function SetupForm() {
     setRoomId,
     transportMode,
     setTransportMode,
+    pollingInterval,
+    setPollingInterval,
+    pingInterval,
+    setPingInterval,
+    developerMode,
+    setDeveloperMode,
   } = useSettingsStore();
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +84,54 @@ export function SetupForm() {
             <option value="relay">Relay Only</option>
           </select>
         </div>
+
+        <div
+          style={{ cursor: "pointer", color: "#666", fontSize: "0.9em" }}
+          onClick={() => setShowAdvanced(!showAdvanced)}
+        >
+          {showAdvanced ? "▼ Hide Advanced" : "▶ Show Advanced"}
+        </div>
+
+        {showAdvanced && (
+          <div
+            className="advanced-section"
+            style={{ borderTop: "1px solid #eee", paddingTop: "10px" }}
+          >
+            <div className="input-group">
+              <label>Clipboard Polling (ms)</label>
+              <input
+                type="number"
+                value={pollingInterval}
+                onChange={(e) => setPollingInterval(Number(e.target.value))}
+                min={100}
+              />
+            </div>
+            <div className="input-group">
+              <label>Ping Interval (ms)</label>
+              <input
+                type="number"
+                value={pingInterval}
+                onChange={(e) => setPingInterval(Number(e.target.value))}
+                min={5000}
+              />
+            </div>
+            <div
+              className="input-group flex-row"
+              style={{ alignItems: "center", gap: "10px" }}
+            >
+              <input
+                id="devMode"
+                type="checkbox"
+                checked={developerMode}
+                onChange={(e) => setDeveloperMode(e.target.checked)}
+                style={{ width: "auto" }}
+              />
+              <label htmlFor="devMode" style={{ margin: 0 }}>
+                Developer Mode
+              </label>
+            </div>
+          </div>
+        )}
 
         {error && <p className="error">{error}</p>}
 

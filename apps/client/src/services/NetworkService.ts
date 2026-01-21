@@ -15,6 +15,7 @@ export class NetworkService {
   private peerConnections: Map<PeerId, RTCPeerConnection> = new Map();
   private dataChannels: Map<PeerId, RTCDataChannel> = new Map();
   private processedMessageIds: Set<string> = new Set();
+  private p2pRetryCounts: Map<PeerId, number> = new Map();
 
   private rtcConfig: RTCConfiguration = {
     iceServers: [
@@ -43,13 +44,13 @@ export class NetworkService {
     this.peerConnections.forEach((pc) => pc.close());
     this.peerConnections.clear();
     this.dataChannels.clear();
+    this.p2pRetryCounts.clear();
     useAppStore.getState().setConnectionStatus("disconnected");
   }
 
   // --- Broadcast Logic ---
 
   async broadcastClipboard(text: string) {
-    console.log(`[Network] Broadcasting clipboard: ${text.length} chars`);
     const payload: ClipboardPayload = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -62,10 +63,10 @@ export class NetworkService {
     try {
       const encrypted = await CryptoService.encrypt(JSON.stringify(payload));
       const transportMode = useSettingsStore.getState().transportMode;
-      const peers = useAppStore.getState().peers;
+      const clients = useAppStore.getState().clients;
 
       console.log(
-        `[Network] Payload encrypted. Mode: ${transportMode}, Peers: ${peers.length}`,
+        `[Network] Broadcast. Mode: ${transportMode}, Clients: ${clients.length}`,
       );
 
       let sentP2PCount = 0;
@@ -75,7 +76,6 @@ export class NetworkService {
         const msgStr = JSON.stringify(encrypted);
         this.dataChannels.forEach((dc) => {
           if (dc.readyState === "open") {
-            console.log(`[Network] Sending P2P to peer`);
             dc.send(msgStr);
             sentP2PCount++;
           }
@@ -83,18 +83,17 @@ export class NetworkService {
       }
 
       // 2. Fallback to Relay
-      const totalPeers = peers.length;
+      const totalClients = clients.length;
+      // If we have clients but couldn't send via P2P to all of them, use Relay
       const shouldRelay =
         transportMode === "relay" ||
-        (transportMode === "auto" && sentP2PCount < totalPeers);
-
-      console.log(
-        `[Network] P2P sent: ${sentP2PCount}/${totalPeers}. Relaying? ${shouldRelay}`,
-      );
+        (transportMode === "auto" && sentP2PCount < totalClients);
 
       if (shouldRelay && this.relay) {
         this.relay.sendData(encrypted);
-        console.log(`[Network] Sent via Relay`);
+        console.log(
+          `[Network] Sent via Relay (P2P coverage: ${sentP2PCount}/${totalClients})`,
+        );
       }
     } catch (e) {
       console.error("Broadcast failed", e);
@@ -106,41 +105,51 @@ export class NetworkService {
 
   private async handleServerMessage(msg: ServerMessage) {
     const store = useAppStore.getState();
-    store.addLog(`[Network] Handling ${msg.type}`, "info");
 
     switch (msg.type) {
       case "WELCOME":
         store.addLog(
-          `[Network] Welcome. My ID: ${msg.payload.myId}`,
+          `[Network] Joined room as ${msg.payload.myId.slice(0, 8)}`,
           "success",
         );
         store.setMyId(msg.payload.myId);
+        store.clearClients();
+
+        // Always add all existing peers as Relay connected first
         if (msg.payload.peers.length > 0) {
           store.addLog(
-            `[Network] Found existing peers: ${msg.payload.peers.join(", ")}`,
+            `[Network] Discovered ${msg.payload.peers.length} existing clients`,
             "info",
           );
-          msg.payload.peers.forEach((pid) => this.initiateP2P(pid));
-        } else {
-          store.addLog(`[Network] No other peers in room.`, "info");
+          msg.payload.peers.forEach((pid) => this.handleFoundClient(pid));
         }
         break;
 
       case "PEER_JOINED":
-        store.addPeer(msg.payload.peerId);
-        store.addLog(`Peer joined: ${msg.payload.peerId.slice(0, 8)}`, "info");
+        store.addLog(
+          `[Network] Client joined: ${msg.payload.peerId.slice(0, 8)}`,
+          "info",
+        );
+        this.handleFoundClient(msg.payload.peerId);
         break;
 
       case "PEER_LEFT":
-        store.removePeer(msg.payload.peerId);
+        store.addLog(
+          `[Network] Client left: ${msg.payload.peerId.slice(0, 8)}`,
+          "info",
+        );
+        store.removeClient(msg.payload.peerId);
         this.closePeer(msg.payload.peerId);
         break;
 
       case "SIGNAL_OFFER":
-        await this.handleOffer(
-          msg.senderId,
-          msg.sdp as RTCSessionDescriptionInit,
-        );
+        // Only handle P2P signals if we are not in strict Relay mode
+        if (useSettingsStore.getState().transportMode !== "relay") {
+          await this.handleOffer(
+            msg.senderId,
+            msg.sdp as RTCSessionDescriptionInit,
+          );
+        }
         break;
 
       case "SIGNAL_ANSWER":
@@ -167,32 +176,58 @@ export class NetworkService {
     }
   }
 
+  // --- Client Management ---
+
+  private handleFoundClient(peerId: PeerId) {
+    const store = useAppStore.getState();
+    const mode = useSettingsStore.getState().transportMode;
+
+    // 1. Always ensure they are in the store as "Relay / Connected" initially
+    // This solves the visibility issue. We are connected to the Relay, and they are too.
+    store.addClient(peerId);
+    store.updateClient(peerId, { status: "connected", type: "relay" });
+
+    // 2. If allowed, try to upgrade to P2P
+    if (mode !== "relay") {
+      // Add a small random delay to prevent glare (both trying to offer at exact same ms)
+      // Though "Polite Peer" pattern is better, this is a simple mitigation.
+      const delay = Math.random() * 1000;
+      setTimeout(() => this.initiateP2P(peerId), delay);
+    }
+  }
+
   // --- WebRTC Implementation ---
 
   private initiateP2P(peerId: PeerId) {
-    if (useSettingsStore.getState().transportMode === "relay") return;
+    const store = useAppStore.getState();
+    store.updateClient(peerId, { status: "connecting" }); // Update status to show we are trying
+    // Note: Type remains 'relay' or 'p2p' depending on what was last successful or default.
+    // Maybe we shouldn't flip to 'connecting' if we are already working via relay?
+    // Actually, 'connecting' usually implies P2P attempt in this UI context.
 
-    useAppStore.getState().addPeer(peerId);
-    useAppStore.getState().updatePeer(peerId, { status: "connecting" });
+    // Clean up any existing connection to force fresh start
+    this.closePeer(peerId);
 
     const pc = this.createPeerConnection(peerId);
     const dc = pc.createDataChannel("clipboard");
     this.setupDataChannel(dc, peerId);
 
-    pc.createOffer().then((offer) => {
-      pc.setLocalDescription(offer);
-      this.relay?.sendInternal({
-        type: "SIGNAL_OFFER",
-        targetId: peerId,
-        sdp: offer,
+    pc.createOffer()
+      .then((offer) => pc.setLocalDescription(offer))
+      .then(() => {
+        this.relay?.sendInternal({
+          type: "SIGNAL_OFFER",
+          targetId: peerId,
+          sdp: pc.localDescription,
+        });
+      })
+      .catch((e) => {
+        console.error("Failed to create offer", e);
+        this.handleP2PFailure(peerId);
       });
-    });
   }
 
   private createPeerConnection(peerId: PeerId): RTCPeerConnection {
-    if (this.peerConnections.has(peerId))
-      return this.peerConnections.get(peerId)!;
-
     const pc = new RTCPeerConnection(this.rtcConfig);
     this.peerConnections.set(peerId, pc);
 
@@ -208,17 +243,19 @@ export class NetworkService {
 
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
-      const status =
-        state === "connected"
-          ? "connected"
-          : state === "failed" || state === "closed"
-            ? "disconnected"
-            : "connecting";
+      const store = useAppStore.getState();
 
-      useAppStore.getState().updatePeer(peerId, {
-        status,
-        type: state === "connected" ? "p2p" : "relay",
-      });
+      console.log(`[P2P] State change for ${peerId}: ${state}`);
+
+      if (state === "connected") {
+        store.updateClient(peerId, { status: "connected", type: "p2p" });
+        store.addLog(`P2P Connected with ${peerId.slice(0, 8)}`, "success");
+        this.p2pRetryCounts.set(peerId, 0); // Reset retries
+      } else if (state === "failed" || state === "disconnected") {
+        // Fallback to relay status
+        store.updateClient(peerId, { status: "connected", type: "relay" });
+        this.handleP2PFailure(peerId);
+      }
     };
 
     pc.ondatachannel = (e) => {
@@ -228,12 +265,34 @@ export class NetworkService {
     return pc;
   }
 
+  private handleP2PFailure(peerId: PeerId) {
+    const currentRetries = this.p2pRetryCounts.get(peerId) || 0;
+    if (currentRetries < 3) {
+      const delay = 2000 * (currentRetries + 1);
+      useAppStore
+        .getState()
+        .addLog(
+          `P2P failed with ${peerId.slice(0, 8)}. Retrying in ${delay / 1000}s...`,
+          "info",
+        );
+      this.p2pRetryCounts.set(peerId, currentRetries + 1);
+      setTimeout(() => this.initiateP2P(peerId), delay);
+    } else {
+      useAppStore
+        .getState()
+        .addLog(
+          `P2P failed with ${peerId.slice(0, 8)} after retries. Using Relay.`,
+          "info",
+        );
+    }
+  }
+
   private setupDataChannel(dc: RTCDataChannel, peerId: PeerId) {
     this.dataChannels.set(peerId, dc);
     dc.onopen = () => {
       useAppStore
         .getState()
-        .updatePeer(peerId, { status: "connected", type: "p2p" });
+        .updateClient(peerId, { status: "connected", type: "p2p" });
     };
     dc.onmessage = (e) => {
       try {
@@ -249,26 +308,32 @@ export class NetworkService {
   }
 
   private async handleOffer(peerId: PeerId, sdp: RTCSessionDescriptionInit) {
-    if (useSettingsStore.getState().transportMode === "relay") return;
-
-    useAppStore.getState().addPeer(peerId);
+    // If we receive an offer, we accept it even if we were planning to offer (Glare handling is complex, simplified here)
     const pc = this.createPeerConnection(peerId);
-    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
 
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
-    this.relay?.sendInternal({
-      type: "SIGNAL_ANSWER",
-      targetId: peerId,
-      sdp: answer,
-    });
+      this.relay?.sendInternal({
+        type: "SIGNAL_ANSWER",
+        targetId: peerId,
+        sdp: answer,
+      });
+    } catch (e) {
+      console.error("Error handling offer", e);
+    }
   }
 
   private async handleAnswer(peerId: PeerId, sdp: RTCSessionDescriptionInit) {
     const pc = this.peerConnections.get(peerId);
     if (pc) {
-      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      } catch (e) {
+        console.error("Error handling answer", e);
+      }
     }
   }
 
@@ -278,7 +343,11 @@ export class NetworkService {
   ) {
     const pc = this.peerConnections.get(peerId);
     if (pc) {
-      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.error("Error adding ice candidate", e);
+      }
     }
   }
 
@@ -292,16 +361,15 @@ export class NetworkService {
 
   private async handleIncomingData(
     encrypted: EncryptedMessage,
-    _senderId: PeerId,
+    senderId: PeerId,
     source: "p2p" | "relay",
   ) {
-    console.log(`[Network] Incoming data from ${_senderId} (${source})`);
+    // console.log(`[Network] Incoming data from ${senderId} (${source})`);
     try {
       const json = await CryptoService.decrypt(encrypted);
       const payload: ClipboardPayload = JSON.parse(json);
 
       if (this.processedMessageIds.has(payload.id)) {
-        console.log(`[Network] Ignoring duplicate message: ${payload.id}`);
         return;
       }
       this.processedMessageIds.add(payload.id);
@@ -311,10 +379,10 @@ export class NetworkService {
 
       useAppStore
         .getState()
-        .addLog(`Received clip from ${_senderId} (${source})`, "success");
-      console.log(
-        `[Network] Dispatching update event. Content len: ${payload.content.length}`,
-      );
+        .addLog(
+          `Received clip from ${senderId.slice(0, 8)} (${source})`,
+          "success",
+        );
 
       // Dispatch event for UI/Clipboard hook
       window.dispatchEvent(
@@ -324,7 +392,7 @@ export class NetworkService {
       console.error("Decryption failed", e);
       useAppStore
         .getState()
-        .addLog(`Decryption failed from ${_senderId}`, "error");
+        .addLog(`Decryption failed from ${senderId.slice(0, 8)}`, "error");
     }
   }
 }
