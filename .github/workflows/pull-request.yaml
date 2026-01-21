@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   client-checks:
     runs-on: "ubuntu-22.04"
@@ -28,3 +32,21 @@ jobs:
       - name: Lint (Rust)
         working-directory: ./apps/client
         run: pnpm lint:rust
+
+  server-checks:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+        with:
+          working-directory: ./apps/server
+
+      - name: Build
+        working-directory: ./apps/server
+        run: pnpm build
+
+      - name: Lint
+        working-directory: ./apps/server
+        run: pnpm lint
