@@ -1,18 +1,20 @@
 {
-  "name": "client",
   "private": true,
-  "version": "0.1.0",
+  "name": "@clipboard-sync/client",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write ."
+    "dev:ts": "vite",
+    "dev": "tauri dev",
+    "build:ts": "tsc && vite build",
+    "build": "tauri build",
+    "lint:ts": "eslint . && prettier --check .",
+    "lint:ts:fix": "eslint . --fix && prettier --write .",
+    "lint:rust": "(cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)",
+    "lint:rust:fix": "(cd src-tauri && cargo fmt && cargo clippy --fix --allow-dirty --allow-staged --all-targets -- -D warnings)"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
+    "@tauri-apps/plugin-clipboard-manager": "~2.3.2",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

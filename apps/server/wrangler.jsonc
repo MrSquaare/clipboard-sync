@@ -1,6 +1,20 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "server",
-  "compatibility_date": "2025-08-03",
+  "compatibility_date": "2026-01-20",
   "main": "./src/index.ts",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CLIPBOARD_ROOM",
+        "class_name": "ClipboardRoom",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ClipboardRoom"],
+    },
+  ],
 }
