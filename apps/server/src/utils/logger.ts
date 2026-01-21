@@ -11,10 +11,15 @@ const LEVELS: Record<LogLevel, number> = {
 };
 
 // Default to 'info' if not specified
-const CURRENT_LEVEL_STR = (typeof process !== "undefined" && process.env?.LOG_LEVEL) || "info";
+const CURRENT_LEVEL_STR =
+  (typeof process !== "undefined" && process.env?.LOG_LEVEL) || "info";
 const CURRENT_LEVEL = LEVELS[CURRENT_LEVEL_STR as LogLevel] ?? LEVELS.info;
 
-const formatMessage = (level: LogLevel, message: string, meta?: Record<string, unknown>) => {
+const formatMessage = (
+  level: LogLevel,
+  message: string,
+  meta?: Record<string, unknown>,
+) => {
   const timestamp = new Date().toISOString();
   const metaStr = meta && Object.keys(meta).length ? JSON.stringify(meta) : "";
   return `[${timestamp}] ${level.toUpperCase()}: ${message} ${metaStr}`;
