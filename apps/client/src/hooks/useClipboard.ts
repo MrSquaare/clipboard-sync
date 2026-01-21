@@ -97,10 +97,8 @@ export function useClipboard() {
           .getState()
           .addLog(`[Clipboard] Write failed: ${err}`, "error");
       } finally {
-        setTimeout(() => {
-          isWritingRemote.current = false;
-          console.log("[Clipboard] Ready for local changes");
-        }, 1500);
+        isWritingRemote.current = false;
+        console.log("[Clipboard] Ready for local changes");
       }
     };
 

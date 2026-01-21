@@ -11,7 +11,8 @@
     "lint:fix": "eslint . --fix && prettier --write ."
   },
   "dependencies": {
-    "hono": "^4.11.4"
+    "hono": "^4.11.4",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.21.1",

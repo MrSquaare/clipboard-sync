@@ -1,6 +1,7 @@
 import { ClientMessage, ServerMessage } from "../types/protocol";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
+import { ServerMessageSchema } from "../validation/schemas";
 
 type MessageHandler = (msg: ServerMessage) => void;
 
@@ -64,8 +65,21 @@ export class RelayTransport {
 
     this.ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(event.data) as ServerMessage;
-        this.onMessage(msg);
+        const raw = JSON.parse(event.data);
+        const result = ServerMessageSchema.safeParse(raw);
+
+        if (!result.success) {
+          console.error("Invalid server message", result.error);
+          useAppStore
+            .getState()
+            .addLog(
+              `[Relay] Invalid Msg: ${result.error.issues[0].message}`,
+              "error",
+            );
+          return;
+        }
+
+        this.onMessage(result.data);
       } catch (e) {
         console.error("Failed to parse WS message", e);
         useAppStore.getState().addLog(`[Relay] Parse Error: ${e}`, "error");

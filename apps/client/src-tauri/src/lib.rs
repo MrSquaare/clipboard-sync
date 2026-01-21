@@ -15,7 +15,7 @@ struct EncryptedMessage {
 fn set_secret(secret: String, salt: String, state: State<'_, CryptoState>) -> Result<(), String> {
     // Ideally we shouldn't pass the raw secret to JS at all, but input comes from UI.
     // We derive it immediately and store only the key.
-    let key = CryptoManager::derive_key(&secret, &salt);
+    let key = CryptoManager::derive_key(&secret, &salt)?;
     let mut state_val = state.0.lock().map_err(|_| "Failed to lock mutex")?;
     *state_val = Some(key);
     Ok(())
@@ -68,5 +68,8 @@ pub fn run() {
             decrypt_message
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .map_err(|e| {
+            eprintln!("Error while running tauri application: {}", e);
+        })
+        .ok();
 }

@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
-import { ClientMessage, ServerMessage, PeerId } from "../types/protocol";
+import { ServerMessage, PeerId } from "../types/protocol";
 import { logger } from "../utils/logger";
+import { ClientMessageSchema } from "../validation/schemas";
 
 interface SessionAttachment {
   id: PeerId;
@@ -51,7 +52,17 @@ export class ClipboardRoom extends DurableObject {
     if (!attachment) return;
 
     try {
-      const msg = JSON.parse(message as string) as ClientMessage;
+      const rawMsg = JSON.parse(message as string);
+      const result = ClientMessageSchema.safeParse(rawMsg);
+
+      if (!result.success) {
+        logger.warn(`[Room] Invalid message from ${attachment.id}`, {
+          error: result.error,
+        });
+        return;
+      }
+
+      const msg = result.data;
       logger.debug(`[Room] RX from ${attachment.id}: ${msg.type}`);
 
       switch (msg.type) {

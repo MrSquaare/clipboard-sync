@@ -16,21 +16,19 @@ impl Default for CryptoState {
 pub struct CryptoManager;
 
 impl CryptoManager {
-    pub fn derive_key(secret: &str, salt: &str) -> Key<Aes256Gcm> {
+    pub fn derive_key(secret: &str, salt: &str) -> Result<Key<Aes256Gcm>, String> {
         // In a real production app, use a random salt stored locally or provided by server.
-        // Here we use the RoomID as salt (user input) for simplicity of stateless setup,
-        // but ensure it is hashed properly.
+        // Here we use the RoomID as salt (user input) for simplicity of stateless setup.
+        // We ensure the result is checked to avoid uninitialized memory usage.
         let mut key_buffer = [0u8; 32]; // AES-256 needs 32 bytes
 
         let argon2 = Argon2::default();
 
-        // We use the hash output to derive the key.
-        // Note: The hash includes the salt. We just want raw bytes.
-        // A better approach for raw key derivation is using `argon2::Argon2::hash_password_into`.
+        argon2
+            .hash_password_into(secret.as_bytes(), salt.as_bytes(), &mut key_buffer)
+            .map_err(|e| format!("Argon2 error: {}", e))?;
 
-        let _ = argon2.hash_password_into(secret.as_bytes(), salt.as_bytes(), &mut key_buffer);
-
-        *Key::<Aes256Gcm>::from_slice(&key_buffer)
+        Ok(*Key::<Aes256Gcm>::from_slice(&key_buffer))
     }
 
     pub fn encrypt(key: &Key<Aes256Gcm>, data: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
