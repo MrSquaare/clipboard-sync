@@ -140,7 +140,7 @@ export class RelayTransport {
     }
   }
 
-  sendData(payload: unknown) {
+  sendData(payload: { iv: string; ciphertext: string }) {
     this.sendInternal({ type: "RELAY_DATA", payload });
   }
 

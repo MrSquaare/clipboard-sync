@@ -1,34 +1,5 @@
 import { z } from "zod";
 
-export const ClientMessageSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("HELLO"),
-    payload: z.object({ version: z.number() }),
-  }),
-  z.object({
-    type: z.literal("PING"),
-  }),
-  z.object({
-    type: z.literal("SIGNAL_OFFER"),
-    targetId: z.string(),
-    sdp: z.unknown(),
-  }),
-  z.object({
-    type: z.literal("SIGNAL_ANSWER"),
-    targetId: z.string(),
-    sdp: z.unknown(),
-  }),
-  z.object({
-    type: z.literal("SIGNAL_ICE"),
-    targetId: z.string(),
-    candidate: z.unknown(),
-  }),
-  z.object({
-    type: z.literal("RELAY_DATA"),
-    payload: z.unknown(),
-  }),
-]);
-
 export const RTCSessionDescriptionInitSchema = z.object({
   type: z.enum(["offer", "answer", "pranswer", "rollback"]),
   sdp: z.string().optional(),
@@ -40,6 +11,38 @@ export const RTCIceCandidateInitSchema = z.object({
   sdpMLineIndex: z.number().nullable().optional(),
   usernameFragment: z.string().nullable().optional(),
 });
+
+export const ClientMessageSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("HELLO"),
+    payload: z.object({ version: z.number() }),
+  }),
+  z.object({
+    type: z.literal("PING"),
+  }),
+  z.object({
+    type: z.literal("SIGNAL_OFFER"),
+    targetId: z.string(),
+    sdp: RTCSessionDescriptionInitSchema,
+  }),
+  z.object({
+    type: z.literal("SIGNAL_ANSWER"),
+    targetId: z.string(),
+    sdp: RTCSessionDescriptionInitSchema,
+  }),
+  z.object({
+    type: z.literal("SIGNAL_ICE"),
+    targetId: z.string(),
+    candidate: RTCIceCandidateInitSchema,
+  }),
+  z.object({
+    type: z.literal("RELAY_DATA"),
+    payload: z.object({
+      iv: z.string(),
+      ciphertext: z.string(),
+    }),
+  }),
+]);
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   z.object({

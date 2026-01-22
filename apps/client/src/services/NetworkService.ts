@@ -215,11 +215,13 @@ export class NetworkService {
     pc.createOffer()
       .then((offer) => pc.setLocalDescription(offer))
       .then(() => {
-        this.relay?.sendInternal({
-          type: "SIGNAL_OFFER",
-          targetId: peerId,
-          sdp: pc.localDescription,
-        });
+        if (pc.localDescription) {
+          this.relay?.sendInternal({
+            type: "SIGNAL_OFFER",
+            targetId: peerId,
+            sdp: pc.localDescription,
+          });
+        }
       })
       .catch((e) => {
         console.error("Failed to create offer", e);
