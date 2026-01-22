@@ -13,8 +13,17 @@
   },
   "migrations": [
     {
-      "tag": "v1",
+      "tag": "v0",
       "new_sqlite_classes": ["ClipboardRoom"],
     },
   ],
+  "route": "clipboard-sync-dev.mrsquaare.fr/*",
+  "env": {
+    "preview": {
+      "route": "clipboard-sync-preview.mrsquaare.fr/*",
+    },
+    "production": {
+      "route": "clipboard-sync.mrsquaare.fr/*",
+    },
+  },
 }

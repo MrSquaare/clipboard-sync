@@ -3,11 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 export interface EncryptedMessage {
   iv: string;
   ciphertext: string;
+  salt: string;
 }
 
 export class CryptoService {
-  static async setSecret(secret: string, salt: string): Promise<void> {
-    await invoke("set_secret", { secret, salt });
+  static async setSecret(secret: string): Promise<void> {
+    await invoke("set_secret", { secret });
   }
 
   static async encrypt(payload: string): Promise<EncryptedMessage> {

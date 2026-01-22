@@ -46,7 +46,27 @@ export function SetupForm() {
       <h2>Connect to Room</h2>
       <form onSubmit={handleJoin} className="flex-col">
         <div className="input-group">
-          <label>Server URL</label>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <label>Server URL</label>
+            <span
+              onClick={() => setServerUrl(__DEFAULT_SERVER_URL__)}
+              style={{
+                cursor: "pointer",
+                fontSize: "0.8em",
+                textDecoration: "underline",
+                color: "#666",
+              }}
+              title={__DEFAULT_SERVER_URL__}
+            >
+              Default
+            </span>
+          </div>
           <input
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}

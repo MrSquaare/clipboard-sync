@@ -5,7 +5,7 @@ use aes_gcm::{
 use argon2::{password_hash::rand_core::RngCore, Argon2};
 use std::sync::Mutex;
 
-pub struct CryptoState(pub Mutex<Option<Key<Aes256Gcm>>>);
+pub struct CryptoState(pub Mutex<Option<String>>);
 
 impl Default for CryptoState {
     fn default() -> Self {
@@ -16,12 +16,14 @@ impl Default for CryptoState {
 pub struct CryptoManager;
 
 impl CryptoManager {
-    pub fn derive_key(secret: &str, salt: &str) -> Result<Key<Aes256Gcm>, String> {
-        // In a real production app, use a random salt stored locally or provided by server.
-        // Here we use the RoomID as salt (user input) for simplicity of stateless setup.
-        // We ensure the result is checked to avoid uninitialized memory usage.
-        let mut key_buffer = [0u8; 32]; // AES-256 needs 32 bytes
+    pub fn generate_salt() -> Vec<u8> {
+        let mut salt = [0u8; 16];
+        OsRng.fill_bytes(&mut salt);
+        salt.to_vec()
+    }
 
+    pub fn derive_key(secret: &str, salt: &str) -> Result<Key<Aes256Gcm>, String> {
+        let mut key_buffer = [0u8; 32]; // AES-256 needs 32 bytes
         let argon2 = Argon2::default();
 
         argon2

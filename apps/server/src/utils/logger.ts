@@ -1,6 +1,3 @@
-// A lightweight logger for Cloudflare Workers (Edge Runtime)
-// Replaces winston which depends on Node.js 'os'/'https' modules.
-
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVELS: Record<LogLevel, number> = {
@@ -10,7 +7,6 @@ const LEVELS: Record<LogLevel, number> = {
   error: 3,
 };
 
-// Default to 'info' if not specified
 const CURRENT_LEVEL_STR =
   (typeof process !== "undefined" && process.env?.LOG_LEVEL) || "info";
 const CURRENT_LEVEL = LEVELS[CURRENT_LEVEL_STR as LogLevel] ?? LEVELS.info;

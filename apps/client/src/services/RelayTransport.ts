@@ -13,10 +13,9 @@ export class RelayTransport {
   private isIntentionalClose = false;
   private retryCount = 0;
   private maxRetries = 3;
-  private retryTimer: number | null = null;
+  private retryTimer: NodeJS.Timeout | null = null;
   private pingTimer: number | null = null;
 
-  // Track the initial connection promise rejection
   private initialConnectReject: ((reason?: unknown) => void) | null = null;
 
   constructor(url: string, roomId: string, onMessage: MessageHandler) {
@@ -51,9 +50,10 @@ export class RelayTransport {
       useAppStore.getState().addLog("[Relay] Connected", "success");
       this.sendInternal({ type: "HELLO", payload: { version: 1 } });
 
-      // Start Heartbeat to prevent 1006 timeout
       const pingInterval = useSettingsStore.getState().pingInterval;
+
       if (this.pingTimer) window.clearInterval(this.pingTimer);
+
       this.pingTimer = window.setInterval(() => {
         this.sendInternal({ type: "PING" });
       }, pingInterval);
@@ -95,6 +95,7 @@ export class RelayTransport {
 
       if (this.pingTimer) {
         window.clearInterval(this.pingTimer);
+
         this.pingTimer = null;
       }
 
@@ -109,7 +110,9 @@ export class RelayTransport {
 
       if (this.retryCount < this.maxRetries) {
         const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
+
         this.retryCount++;
+
         useAppStore
           .getState()
           .addLog(`[Relay] Reconnecting in ${delay}ms...`, "info");
@@ -121,6 +124,7 @@ export class RelayTransport {
         useAppStore
           .getState()
           .addLog(`[Relay] Max retries reached. Giving up.`, "error");
+
         if (this.initialConnectReject) {
           this.initialConnectReject(new Error("Max retries reached"));
           this.initialConnectReject = null;
@@ -140,16 +144,19 @@ export class RelayTransport {
     }
   }
 
-  sendData(payload: { iv: string; ciphertext: string }) {
+  sendData(payload: { iv: string; ciphertext: string; salt: string }) {
     this.sendInternal({ type: "RELAY_DATA", payload });
   }
 
   disconnect() {
     this.isIntentionalClose = true;
+
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
+
       this.retryTimer = null;
     }
+
     this.ws?.close();
   }
 }

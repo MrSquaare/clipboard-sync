@@ -19,16 +19,12 @@ export class ClipboardRoom extends DurableObject {
 
     const peerId = crypto.randomUUID();
 
-    // For Hibernation API, acceptWebSocket(ws, tags)
-    // We use the peerId as a tag to find it later
     this.ctx.acceptWebSocket(server, [peerId]);
 
-    // We also store the full metadata in the attachment
     server.serializeAttachment({ id: peerId });
 
     logger.info(`[Room] New peer connected`, { peerId });
 
-    // Get list of existing peers
     const peers = this.ctx
       .getWebSockets()
       .map((ws) => (ws.deserializeAttachment() as SessionAttachment)?.id)
@@ -124,6 +120,7 @@ export class ClipboardRoom extends DurableObject {
     wasClean: boolean,
   ) {
     const attachment = ws.deserializeAttachment() as SessionAttachment;
+
     if (attachment) {
       logger.info(
         `[Room] Peer disconnected: ${attachment.id} (code=${code}, reason=${reason}, clean=${wasClean})`,
@@ -136,14 +133,13 @@ export class ClipboardRoom extends DurableObject {
     this.webSocketClose(ws, 1006, `Error: ${error}`, false);
   }
 
-  // --- Helpers ---
-
   private send(ws: WebSocket, msg: ServerMessage) {
     ws.send(JSON.stringify(msg));
   }
 
   private broadcast(msg: ServerMessage, exclude?: WebSocket) {
     const str = JSON.stringify(msg);
+
     for (const ws of this.ctx.getWebSockets()) {
       if (ws !== exclude) {
         try {
@@ -157,8 +153,10 @@ export class ClipboardRoom extends DurableObject {
 
   private forwardTo(targetId: PeerId, msg: ServerMessage) {
     const str = JSON.stringify(msg);
+
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = ws.deserializeAttachment() as SessionAttachment;
+
       if (attachment?.id === targetId) {
         try {
           ws.send(str);
@@ -168,6 +166,7 @@ export class ClipboardRoom extends DurableObject {
         return;
       }
     }
+
     logger.warn(`[Room] Target peer not found: ${targetId}`);
   }
 }

@@ -22,16 +22,15 @@ export function useClipboard() {
     let active = true;
 
     const setupPolling = async () => {
-      // 1. Baseline: Read current clipboard content
       try {
         const text = await readText();
-        if (!active) return; // Effect cleaned up while reading baseline
+
+        if (!active) return;
 
         if (text) {
           lastContent.current = text;
-          console.log(
-            "[Clipboard] Baseline captured. Monitoring for changes...",
-          );
+
+          console.log("[Clipboard] Baseline captured.");
         }
       } catch (e) {
         console.error("[Clipboard] Baseline read error:", e);
@@ -43,11 +42,12 @@ export function useClipboard() {
         `[Clipboard] Starting polling interval (${pollingInterval}ms)...`,
       );
 
-      // 2. Start polling for local changes
       interval = window.setInterval(async () => {
         try {
           const text = await readText();
+
           if (!active) return;
+
           if (text && text !== lastContent.current) {
             if (!isWritingRemote.current) {
               console.log(
@@ -67,6 +67,7 @@ export function useClipboard() {
           }
         } catch (e) {
           console.error("[Clipboard] Read error:", e);
+
           useAppStore
             .getState()
             .addLog(`[Clipboard] Read Error: ${e}`, "error");
@@ -76,7 +77,6 @@ export function useClipboard() {
 
     setupPolling();
 
-    // 3. Listen for remote updates
     const handleRemote = async (e: Event) => {
       const text = (e as CustomEvent).detail;
       console.log(
@@ -84,9 +84,12 @@ export function useClipboard() {
       );
 
       isWritingRemote.current = true;
+
       try {
         await writeText(text);
+
         lastContent.current = text;
+
         console.log("[Clipboard] Successfully wrote to system clipboard");
         useAppStore
           .getState()
@@ -98,6 +101,7 @@ export function useClipboard() {
           .addLog(`[Clipboard] Write failed: ${err}`, "error");
       } finally {
         isWritingRemote.current = false;
+
         console.log("[Clipboard] Ready for local changes");
       }
     };
@@ -106,7 +110,9 @@ export function useClipboard() {
 
     return () => {
       active = false;
+
       if (interval) window.clearInterval(interval);
+
       window.removeEventListener("clipboard-remote-update", handleRemote);
     };
   }, [isConnected, pollingInterval]);

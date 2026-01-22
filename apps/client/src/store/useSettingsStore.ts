@@ -22,7 +22,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      serverUrl: "ws://localhost:8787",
+      serverUrl: __DEFAULT_SERVER_URL__,
       roomId: "",
       transportMode: "auto",
       pollingInterval: 1000,

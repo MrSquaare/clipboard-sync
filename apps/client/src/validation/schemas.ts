@@ -40,6 +40,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
     payload: z.object({
       iv: z.string(),
       ciphertext: z.string(),
+      salt: z.string(),
     }),
   }),
 ]);
@@ -84,6 +85,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     payload: z.object({
       iv: z.string(),
       ciphertext: z.string(),
+      salt: z.string(),
     }),
   }),
   z.object({
