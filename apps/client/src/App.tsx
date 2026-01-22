@@ -1,21 +1,20 @@
-import "./App.css";
+import "@mantine/core/styles.css";
+
 import { useAppStore } from "./store/useAppStore";
 import { useClipboard } from "./hooks/useClipboard";
-import { SetupForm } from "./components/SetupForm";
+import { Setup } from "./components/Setup";
 import { Dashboard } from "./components/Dashboard";
+import { MantineProvider } from "@mantine/core";
 
 function App() {
   const connectionStatus = useAppStore((s) => s.connectionStatus);
 
-  // Initialize clipboard hooks
   useClipboard();
 
   return (
-    <div className="container">
-      <h1>Clipboard Sync</h1>
-
-      {connectionStatus === "disconnected" ? <SetupForm /> : <Dashboard />}
-    </div>
+    <MantineProvider defaultColorScheme="dark" forceColorScheme="dark">
+      {connectionStatus === "disconnected" ? <Setup /> : <Dashboard />}
+    </MantineProvider>
   );
 }
 
