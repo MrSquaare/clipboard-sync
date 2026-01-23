@@ -18,16 +18,13 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
         with:
-          working-directory: ./apps/client
           setup-tauri: "true"
 
       - name: Build
-        working-directory: ./apps/client
-        run: pnpm build
+        run: pnpm build --filter @clipboard-sync/client
 
       - name: Lint
-        working-directory: ./apps/client
-        run: pnpm lint
+        run: pnpm lint --filter @clipboard-sync/client
 
   server-checks:
     runs-on: "ubuntu-22.04"
@@ -36,13 +33,9 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
-        with:
-          working-directory: ./apps/server
 
       - name: Build
-        working-directory: ./apps/server
-        run: pnpm build
+        run: pnpm build --filter @clipboard-sync/server
 
       - name: Lint
-        working-directory: ./apps/server
-        run: pnpm lint
+        run: pnpm lint --filter @clipboard-sync/server

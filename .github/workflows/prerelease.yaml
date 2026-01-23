@@ -27,7 +27,6 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-env
         with:
-          working-directory: ./apps/client
           setup-tauri: "true"
 
       - name: Build and release Tauri app
