@@ -1,4 +1,8 @@
-import { ClientMessageSchema, ServerMessage, PeerId } from "@clipboard-sync/schemas"
+import {
+  ClientMessageSchema,
+  ServerMessage,
+  PeerId,
+} from "@clipboard-sync/schemas";
 import { DurableObject } from "cloudflare:workers";
 
 import { logger } from "../utils/logger";

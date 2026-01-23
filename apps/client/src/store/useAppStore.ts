@@ -1,7 +1,6 @@
 import type { PeerId } from "@clipboard-sync/schemas";
 import { create } from "zustand";
 
-
 export type PeerStatus = "connected" | "connecting" | "disconnected";
 export type PeerType = "p2p" | "relay";
 
