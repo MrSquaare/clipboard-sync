@@ -21,6 +21,9 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("PING"),
   }),
   z.object({
+    type: z.literal("LEAVE"),
+  }),
+  z.object({
     type: z.literal("SIGNAL_OFFER"),
     targetId: z.string(),
     sdp: RTCSessionDescriptionInitSchema,

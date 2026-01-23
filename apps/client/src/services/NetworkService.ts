@@ -16,6 +16,7 @@ export class NetworkService {
   private dataChannels: Map<PeerId, RTCDataChannel> = new Map();
   private processedMessageIds: Set<string> = new Set();
   private p2pRetryCounts: Map<PeerId, number> = new Map();
+  private pendingP2PTimeouts: Map<PeerId, ReturnType<typeof setTimeout>> = new Map();
 
   private rtcConfig: RTCConfiguration = {
     iceServers: [
@@ -39,11 +40,20 @@ export class NetworkService {
   }
 
   disconnect() {
-    this.relay?.disconnect();
+    this.pendingP2PTimeouts.forEach((timeout) => clearTimeout(timeout));
+    this.pendingP2PTimeouts.clear();
+
+    if (this.relay) {
+      this.relay.sendLeave();
+      this.relay.disconnect();
+    }
+    
     this.peerConnections.forEach((pc) => pc.close());
     this.peerConnections.clear();
     this.dataChannels.clear();
     this.p2pRetryCounts.clear();
+    
+    useAppStore.getState().clearClients();
     useAppStore.getState().setConnectionStatus("disconnected");
   }
 
@@ -173,8 +183,16 @@ export class NetworkService {
     store.updateClient(peerId, { status: "connected", type: "relay" });
 
     if (mode !== "relay") {
+      const existingTimeout = this.pendingP2PTimeouts.get(peerId);
+      if (existingTimeout) clearTimeout(existingTimeout);
+
       const delay = Math.random() * 1000;
-      setTimeout(() => this.initiateP2P(peerId), delay);
+      const timeoutId = setTimeout(() => {
+        this.pendingP2PTimeouts.delete(peerId);
+        this.initiateP2P(peerId);
+      }, delay);
+
+      this.pendingP2PTimeouts.set(peerId, timeoutId);
     }
   }
 
@@ -307,6 +325,10 @@ export class NetworkService {
   private async handleAnswer(peerId: PeerId, sdp: RTCSessionDescriptionInit) {
     const pc = this.peerConnections.get(peerId);
     if (pc) {
+      if (pc.signalingState === "stable") {
+        console.warn(`[P2P] Ignoring answer for ${peerId.slice(0, 8)} - already stable`);
+        return;
+      }
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       } catch (e) {

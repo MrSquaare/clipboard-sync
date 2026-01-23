@@ -5,6 +5,7 @@ import { ClientMessageSchema } from "../validation/schemas";
 
 interface SessionAttachment {
   id: PeerId;
+  hasLeft?: boolean;
 }
 
 export class ClipboardRoom extends DurableObject {
@@ -66,6 +67,16 @@ export class ClipboardRoom extends DurableObject {
           this.send(ws, { type: "PONG" });
           break;
 
+        case "LEAVE":
+          attachment.hasLeft = true;
+          ws.serializeAttachment(attachment);
+          this.broadcast(
+            { type: "PEER_LEFT", payload: { peerId: attachment.id } },
+            ws,
+          );
+          ws.close(1000, "Left by user");
+          break;
+
         case "HELLO":
           this.broadcast(
             { type: "PEER_JOINED", payload: { peerId: attachment.id } },
@@ -121,11 +132,14 @@ export class ClipboardRoom extends DurableObject {
   ) {
     const attachment = ws.deserializeAttachment() as SessionAttachment;
 
-    if (attachment) {
+    if (attachment && !attachment.hasLeft) {
       logger.info(
         `[Room] Peer disconnected: ${attachment.id} (code=${code}, reason=${reason}, clean=${wasClean})`,
       );
-      this.broadcast({ type: "PEER_LEFT", payload: { peerId: attachment.id } });
+      this.broadcast(
+        { type: "PEER_LEFT", payload: { peerId: attachment.id } },
+        ws,
+      );
     }
   }
 

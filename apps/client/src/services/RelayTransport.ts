@@ -148,6 +148,10 @@ export class RelayTransport {
     this.sendInternal({ type: "RELAY_DATA", payload });
   }
 
+  sendLeave() {
+    this.sendInternal({ type: "LEAVE" });
+  }
+
   disconnect() {
     this.isIntentionalClose = true;
 
@@ -157,6 +161,9 @@ export class RelayTransport {
       this.retryTimer = null;
     }
 
-    this.ws?.close();
+    if (this.ws) {
+      this.ws.close(1000, "Client Disconnect");
+      this.ws = null;
+    }
   }
 }
