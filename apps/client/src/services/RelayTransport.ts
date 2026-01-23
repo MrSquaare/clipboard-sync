@@ -1,7 +1,11 @@
-import { ClientMessage, ServerMessage } from "../types/protocol";
+import {
+  ServerMessageSchema,
+  type ClientMessage,
+  type ServerMessage,
+} from "@clipboard-sync/schemas";
+
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
-import { ServerMessageSchema } from "../validation/schemas";
 
 type MessageHandler = (msg: ServerMessage) => void;
 
@@ -13,7 +17,7 @@ export class RelayTransport {
   private isIntentionalClose = false;
   private retryCount = 0;
   private maxRetries = 3;
-  private retryTimer: NodeJS.Timeout | null = null;
+  private retryTimer: number | null = null;
   private pingTimer: number | null = null;
 
   private initialConnectReject: ((reason?: unknown) => void) | null = null;

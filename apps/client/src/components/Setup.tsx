@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { useSettingsStore } from "../store/useSettingsStore";
-import { networkService } from "../services/NetworkService";
 import {
   TextInput,
   PasswordInput,
@@ -28,6 +25,10 @@ import {
   IconChevronDown,
   IconChevronRight,
 } from "@tabler/icons-react";
+import { useState } from "react";
+
+import { networkService } from "../services/NetworkService";
+import { useSettingsStore } from "../store/useSettingsStore";
 
 export function Setup() {
   const {

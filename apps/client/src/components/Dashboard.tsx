@@ -1,6 +1,3 @@
-import { useAppStore } from "../store/useAppStore";
-import { useSettingsStore } from "../store/useSettingsStore";
-import { networkService } from "../services/NetworkService";
 import {
   Container,
   Paper,
@@ -25,6 +22,10 @@ import {
   IconDevices,
   IconBug,
 } from "@tabler/icons-react";
+
+import { networkService } from "../services/NetworkService";
+import { useAppStore } from "../store/useAppStore";
+import { useSettingsStore } from "../store/useSettingsStore";
 
 export function Dashboard() {
   const { myId, clients, logs } = useAppStore();

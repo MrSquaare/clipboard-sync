@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { useEffect, useRef } from "react";
+
+import { networkService } from "../services/NetworkService";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
-import { networkService } from "../services/NetworkService";
 
 export function useClipboard() {
   const isConnected = useAppStore((s) => s.connectionStatus === "connected");

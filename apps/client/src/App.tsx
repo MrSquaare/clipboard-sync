@@ -1,10 +1,11 @@
 import "@mantine/core/styles.css";
 
-import { useAppStore } from "./store/useAppStore";
-import { useClipboard } from "./hooks/useClipboard";
-import { Setup } from "./components/Setup";
-import { Dashboard } from "./components/Dashboard";
 import { MantineProvider } from "@mantine/core";
+
+import { Dashboard } from "./components/Dashboard";
+import { Setup } from "./components/Setup";
+import { useClipboard } from "./hooks/useClipboard";
+import { useAppStore } from "./store/useAppStore";
 
 function App() {
   const connectionStatus = useAppStore((s) => s.connectionStatus);

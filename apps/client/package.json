@@ -10,7 +10,8 @@
     "lint:ts": "eslint . && prettier --check .",
     "lint:ts:fix": "eslint . --fix && prettier --write .",
     "lint:rust": "(cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)",
-    "lint:rust:fix": "(cd src-tauri && cargo fmt && cargo clippy --fix --allow-dirty --allow-staged --all-targets -- -D warnings)"
+    "lint:rust:fix": "(cd src-tauri && cargo fmt && cargo clippy --fix --allow-dirty --allow-staged --all-targets -- -D warnings)",
+    "clean": "rm -rf dist/ src-tauri/target/"
   },
   "dependencies": {
     "@mantine/core": "^8.3.13",
@@ -22,10 +23,12 @@
     "@tauri-apps/plugin-opener": "^2.5.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "zod": "^4.3.5",
+    "zod": "^4.3.6",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@clipboard-sync/eslint-config": "workspace:*",
+    "@clipboard-sync/schemas": "workspace:*",
     "@eslint/js": "^9.39.2",
     "@tauri-apps/cli": "^2.9.6",
     "@types/node": "^25.0.10",
@@ -34,12 +37,14 @@
     "@vitejs/plugin-react": "^5.1.2",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
-    "globals": "^17.0.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^17.1.0",
     "jiti": "^2.6.1",
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
-    "prettier": "^3.8.0",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.53.1",
     "vite": "^7.3.1"

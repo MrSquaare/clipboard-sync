@@ -99,3 +99,8 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     }),
   }),
 ]);
+
+export type PeerId = string;
+export type RoomId = string;
+export type ClientMessage = z.infer<typeof ClientMessageSchema>;
+export type ServerMessage = z.infer<typeof ServerMessageSchema>;

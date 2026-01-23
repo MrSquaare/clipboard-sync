@@ -1,7 +1,7 @@
+import { ClientMessageSchema, ServerMessage, PeerId } from "@clipboard-sync/schemas"
 import { DurableObject } from "cloudflare:workers";
-import { ServerMessage, PeerId } from "../types/protocol";
+
 import { logger } from "../utils/logger";
-import { ClientMessageSchema } from "../validation/schemas";
 
 interface SessionAttachment {
   id: PeerId;

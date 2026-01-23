@@ -1,8 +1,10 @@
-import { RelayTransport } from "./RelayTransport";
-import { CryptoService, EncryptedMessage } from "./CryptoService";
+import type { ServerMessage, PeerId } from "@clipboard-sync/schemas";
+
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
-import { ServerMessage, PeerId } from "../types/protocol";
+
+import { CryptoService, type EncryptedMessage } from "./CryptoService";
+import { RelayTransport } from "./RelayTransport";
 
 interface ClipboardPayload {
   id: string;

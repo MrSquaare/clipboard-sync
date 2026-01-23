@@ -1,5 +1,6 @@
-import { PeerId } from "../types/protocol";
-import { EncryptedMessage } from "./CryptoService";
+import type { PeerId } from "@clipboard-sync/schemas";
+
+import type { EncryptedMessage } from "./CryptoService";
 
 export interface Transport {
   connect(targetId?: PeerId): Promise<void>;

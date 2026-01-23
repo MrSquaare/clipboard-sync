@@ -1,0 +1,30 @@
+{
+  "private": true,
+  "name": "@clipboard-sync/schemas",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@clipboard-sync/eslint-config": "workspace:*",
+    "eslint": "^9.39.2",
+    "prettier": "^3.8.1",
+    "tsdown": "^0.20.1",
+    "typescript": "^5.9.3"
+  }
+}
