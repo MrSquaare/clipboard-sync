@@ -11,6 +11,8 @@
     "lint:ts:fix": "eslint . --fix && prettier --write .",
     "lint:rust": "(cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)",
     "lint:rust:fix": "(cd src-tauri && cargo fmt && cargo clippy --fix --allow-dirty --allow-staged --all-targets -- -D warnings)",
+    "lint": "conc --kill-others-on-fail npm:lint:ts npm:lint:rust",
+    "lint:fix": "conc --kill-others-on-fail npm:lint:ts:fix npm:lint:rust:fix",
     "clean": "rm -rf dist/ src-tauri/target/"
   },
   "dependencies": {
@@ -35,6 +37,7 @@
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",

@@ -25,13 +25,9 @@ jobs:
         working-directory: ./apps/client
         run: pnpm build
 
-      - name: Lint (TypeScript)
+      - name: Lint
         working-directory: ./apps/client
-        run: pnpm lint:ts
-
-      - name: Lint (Rust)
-        working-directory: ./apps/client
-        run: pnpm lint:rust
+        run: pnpm lint
 
   server-checks:
     runs-on: "ubuntu-22.04"
