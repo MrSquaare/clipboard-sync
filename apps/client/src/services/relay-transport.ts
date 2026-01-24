@@ -1,216 +1,68 @@
-import {
-  ServerMessageSchema,
-  type ClientMessage,
-  type ServerMessage,
-} from "@clipboard-sync/schemas";
-
-import { useLogStore } from "../store/useLogStore";
-import { useNetworkStore } from "../store/useNetworkStore";
-import { useSettingsStore } from "../store/useSettingsStore";
+import type { PeerId } from "@clipboard-sync/schemas";
 
 import type { EncryptedMessage } from "./crypto";
-import type { Transport } from "./transport";
-
-type MessageHandler = (msg: ServerMessage) => Promise<void> | void;
+import type { SignalingService } from "./signaling";
+import type { Transport, TransportEvents } from "./transport";
 
 /**
- * Manages the WebSocket connection to the signaling/relay server.
+ * Wraps the SignalingService to act as a Transport for encrypted data payloads.
+ * This allows the NetworkManager to treat Relay just like P2P.
  */
 export class RelayTransport implements Transport {
-  private ws: WebSocket | null = null;
-  private onMessage: MessageHandler;
-  private url: string;
-  private roomId: string;
-  private isIntentionalClose = false;
-  private retryCount = 0;
-  private maxRetries = 3;
-  private retryTimer: number | null = null;
-  private pingTimer: number | null = null;
+  private signaling: SignalingService;
+  private listener: TransportEvents | null = null;
 
-  private initialConnectReject: ((reason?: unknown) => void) | null = null;
-
-  /**
-   * Creates a new RelayTransport instance.
-   * @param url - The WebSocket server URL.
-   * @param roomId - The room ID to join.
-   * @param onMessage - Async callback for handling incoming messages.
-   */
-  constructor(url: string, roomId: string, onMessage: MessageHandler) {
-    this.url = url;
-    this.roomId = roomId;
-    this.onMessage = onMessage;
+  constructor(signaling: SignalingService) {
+    this.signaling = signaling;
   }
 
-  /**
-   * Connects to the WebSocket server.
-   */
-  connect(): Promise<void> {
-    this.isIntentionalClose = false;
-    this.retryCount = 0;
-
-    return new Promise((resolve, reject) => {
-      this.initialConnectReject = reject;
-      this.setupSocket(resolve);
-    });
+  public setListener(listener: TransportEvents): void {
+    this.listener = listener;
   }
 
-  private setupSocket(onSuccess: () => void) {
-    const fullUrl = `${this.url}/ws?roomId=${this.roomId}`;
-    useLogStore
-      .getState()
-      .addLog(
-        `[Relay] Connecting to: ${fullUrl} (Attempt ${this.retryCount + 1})`,
-        "info",
-      );
-
-    this.ws = new WebSocket(fullUrl);
-
-    this.ws.onopen = () => {
-      useNetworkStore.getState().setConnectionStatus("connected");
-      useLogStore.getState().addLog("[Relay] Connected", "success");
-      this.sendInternal({ type: "HELLO", payload: { version: 1 } });
-
-      const pingInterval = useSettingsStore.getState().pingInterval;
-
-      if (this.pingTimer) window.clearInterval(this.pingTimer);
-
-      this.pingTimer = window.setInterval(() => {
-        this.sendInternal({ type: "PING" });
-      }, pingInterval);
-
-      this.retryCount = 0;
-      this.initialConnectReject = null;
-      onSuccess();
-    };
-
-    this.ws.onmessage = (event) => {
-      try {
-        const raw = JSON.parse(event.data);
-        const result = ServerMessageSchema.safeParse(raw);
-
-        if (!result.success) {
-          console.error("Invalid server message", result.error);
-          useLogStore
-            .getState()
-            .addLog(
-              `[Relay] Invalid Msg: ${result.error.issues[0].message}`,
-              "error",
-            );
-          return;
-        }
-
-        // Handle async message processing safely
-        void Promise.resolve(this.onMessage(result.data)).catch((err) => {
-          console.error("Message handler failed", err);
-          useLogStore
-            .getState()
-            .addLog(`[Relay] Message Handler Error: ${err}`, "error");
-        });
-      } catch (e) {
-        console.error("Failed to parse WS message", e);
-        useLogStore.getState().addLog(`[Relay] Parse Error: ${e}`, "error");
-      }
-    };
-
-    this.ws.onerror = (e) => {
-      console.error("WS Error", e);
-    };
-
-    this.ws.onclose = (e) => {
-      useNetworkStore.getState().setConnectionStatus("disconnected");
-
-      if (this.pingTimer) {
-        window.clearInterval(this.pingTimer);
-
-        this.pingTimer = null;
-      }
-
-      if (this.isIntentionalClose) {
-        useLogStore.getState().addLog(`[Relay] Disconnected by user`, "info");
-        return;
-      }
-
-      useLogStore
-        .getState()
-        .addLog(`[Relay] Disconnected (Code: ${e.code}).`, "error");
-
-      if (this.retryCount < this.maxRetries) {
-        const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
-
-        this.retryCount++;
-
-        useLogStore
-          .getState()
-          .addLog(`[Relay] Reconnecting in ${delay}ms...`, "info");
-
-        this.retryTimer = setTimeout(() => {
-          this.setupSocket(onSuccess);
-        }, delay);
-      } else {
-        useLogStore
-          .getState()
-          .addLog(`[Relay] Max retries reached. Giving up.`, "error");
-
-        if (this.initialConnectReject) {
-          this.initialConnectReject(new Error("Max retries reached"));
-          this.initialConnectReject = null;
-        }
-      }
-    };
-  }
-
-  /**
-   * Sends a raw message to the signaling server.
-   */
-  sendInternal(msg: ClientMessage) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      const json = JSON.stringify(msg);
-      this.ws.send(json);
+  public async connect(_targetId?: PeerId): Promise<void> {
+    // Relay is connected when Signaling is connected.
+    // If Signaling is already connected, we just emit status.
+    if (this.signaling.isConnected()) {
+      this.listener?.onStatusChange("connected");
     } else {
-      useLogStore
-        .getState()
-        .addLog(`[Relay] TX Failed (Not Open): ${msg.type}`, "error");
+      // We generally assume the Manager connects Signaling explicitly,
+      // but this could trigger it if we wanted strict autonomy.
+      // For this design, we assume 'connect' here is a no-op
+      // because Signaling is managed at a higher level,
+      // OR we map it to ensuring Signaling is up.
     }
   }
 
-  /**
-   * Sends encrypted data via relay.
-   * Implements Transport interface.
-   */
-  async send(payload: EncryptedMessage, _targetId?: string): Promise<void> {
-    this.sendInternal({ type: "RELAY_DATA", payload });
+  public disconnect(): void {
+    // We do NOT disconnect the signaling service here,
+    // because P2P might still need it.
+    // We just stop reporting "connected" for this transport view.
+    this.listener?.onStatusChange("disconnected");
   }
 
-  /**
-   * Checks if WebSocket is open.
-   * Implements Transport interface.
-   */
-  isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+  public async send(
+    payload: EncryptedMessage,
+    _targetId?: PeerId,
+  ): Promise<void> {
+    this.signaling.sendRelayData(payload);
   }
 
-  /**
-   * Sends a LEAVE message to the server.
-   */
-  sendLeave() {
-    this.sendInternal({ type: "LEAVE" });
+  // --- External Hooks ---
+
+  // These are called by the Manager when events come from Signaling
+
+  public handleStatusChange(
+    status: "disconnected" | "connecting" | "connected" | "reconnecting",
+  ) {
+    this.listener?.onStatusChange(status);
   }
 
-  /**
-   * Disconnects the WebSocket.
-   */
-  disconnect() {
-    this.isIntentionalClose = true;
+  public handleMessage(senderId: PeerId, payload: EncryptedMessage) {
+    this.listener?.onMessage(payload, senderId);
+  }
 
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-
-      this.retryTimer = null;
-    }
-
-    if (this.ws) {
-      this.ws.close(1000, "Client Disconnect");
-      this.ws = null;
-    }
+  public handleError(error: Error) {
+    this.listener?.onError(error);
   }
 }

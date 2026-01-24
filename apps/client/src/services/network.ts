@@ -1,4 +1,4 @@
-import type { ServerMessage, PeerId } from "@clipboard-sync/schemas";
+import type { PeerId } from "@clipboard-sync/schemas";
 
 import { useClientStore } from "../store/useClientStore";
 import { useClipboardStore } from "../store/useClipboardStore";
@@ -7,8 +7,9 @@ import { useNetworkStore } from "../store/useNetworkStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 
 import { CryptoService, type EncryptedMessage } from "./crypto";
-import { P2PTransport, type P2PSignaler } from "./p2p-transport";
+import { P2PTransport } from "./p2p-transport";
 import { RelayTransport } from "./relay-transport";
+import { SignalingService } from "./signaling";
 
 interface ClipboardPayload {
   id: string;
@@ -16,74 +17,112 @@ interface ClipboardPayload {
   content: string;
 }
 
-/**
- * Service managing network interactions, including P2P connections and Relay fallback.
- */
 export class NetworkService {
+  private signaling: SignalingService | null = null;
   private relay: RelayTransport | null = null;
   private p2p: P2PTransport | null = null;
+
   private processedMessageIds: Set<string> = new Set();
-  private messageIdHistory: string[] = []; // Rolling window for deduplication
-  private pendingP2PTimeouts: Map<PeerId, ReturnType<typeof setTimeout>> =
-    new Map();
+  private messageIdHistory: string[] = [];
 
-  /**
-   * Joins a room with the given secret.
-   * @param secret - The shared secret for encryption.
-   */
   async joinRoom(secret: string) {
-    const { serverUrl, roomId } = useSettingsStore.getState();
+    this.disconnect();
 
+    const { serverUrl, roomId } = useSettingsStore.getState();
     await CryptoService.setSecret(secret);
 
-    // Initialize Relay
-    this.relay = new RelayTransport(
-      serverUrl,
-      roomId,
-      this.handleServerMessage.bind(this),
-    );
+    // 1. Initialize Signaling
+    this.signaling = new SignalingService(serverUrl, roomId);
 
-    // Initialize P2P with a Signaler interface that uses the Relay
-    const signaler: P2PSignaler = {
-      sendOffer: (targetId, sdp) =>
-        this.relay?.sendInternal({ type: "SIGNAL_OFFER", targetId, sdp }),
-      sendAnswer: (targetId, sdp) =>
-        this.relay?.sendInternal({ type: "SIGNAL_ANSWER", targetId, sdp }),
-      sendCandidate: (targetId, candidate) =>
-        this.relay?.sendInternal({ type: "SIGNAL_ICE", targetId, candidate }),
-    };
+    // 2. Initialize Transports
+    this.relay = new RelayTransport(this.signaling);
+    this.p2p = new P2PTransport(this.signaling);
 
-    this.p2p = new P2PTransport(signaler, (msg, senderId) =>
-      this.handleIncomingData(msg, senderId, "p2p"),
-    );
+    // 3. Wire up Signaling Events
+    this.signaling.setListener({
+      onStatusChange: (status) => {
+        // Signaling status is effectively Relay status
+        useNetworkStore.getState().setConnectionStatus(status);
+        this.relay?.handleStatusChange(status);
 
-    await this.relay.connect();
+        if (status === "connected") {
+          useLogStore
+            .getState()
+            .addLog("[Network] Connected to Room", "success");
+        } else if (status === "disconnected") {
+          useLogStore
+            .getState()
+            .addLog("[Network] Disconnected from Room", "error");
+        }
+      },
+      onWelcome: (myId, peers) => this.handleWelcome(myId, peers),
+      onPeerJoined: (peerId) => this.handlePeerJoined(peerId),
+      onPeerLeft: (peerId) => this.handlePeerLeft(peerId),
+      onRelayMessage: (senderId, payload) => {
+        this.relay?.handleMessage(senderId, payload);
+      },
+      onSignal: (senderId, type, data) => {
+        const mode = useSettingsStore.getState().transportMode;
+        if (mode !== "relay" && this.p2p) {
+          this.p2p.handleSignal(senderId, type, data);
+        }
+      },
+      onError: (err) => {
+        useLogStore
+          .getState()
+          .addLog(`[Network] Error: ${err.message}`, "error");
+        this.relay?.handleError(err);
+      },
+    });
+
+    // 4. Wire up Transport Events (to handle messages and logs)
+    this.relay.setListener({
+      onStatusChange: () => {}, // Handled by signaling
+      onMessage: (msg, senderId) =>
+        this.handleIncomingMessage(msg, senderId, "relay"),
+      onError: () => {}, // Handled by signaling
+    });
+
+    this.p2p.setListener({
+      onStatusChange: () => {},
+      onMessage: (msg, senderId) =>
+        this.handleIncomingMessage(msg, senderId, "p2p"),
+      onError: (e) => console.error("P2P Error", e),
+      onPeerConnected: (peerId) => {
+        useClientStore
+          .getState()
+          .updateClient(peerId, { status: "connected", type: "p2p" });
+        useLogStore
+          .getState()
+          .addLog(`[P2P] Connected to ${peerId.slice(0, 8)}`, "success");
+      },
+      onPeerDisconnected: (peerId) => {
+        useClientStore
+          .getState()
+          .updateClient(peerId, { status: "connected", type: "relay" });
+        useLogStore
+          .getState()
+          .addLog(`[P2P] Disconnected from ${peerId.slice(0, 8)}`, "info");
+      },
+    });
+
+    // 5. Connect
+    this.signaling.connect();
   }
 
-  /**
-   * Disconnects from all peers and the relay server.
-   */
   disconnect() {
-    this.pendingP2PTimeouts.forEach((timeout) => clearTimeout(timeout));
-    this.pendingP2PTimeouts.clear();
+    this.signaling?.disconnect();
+    this.p2p?.disconnect();
+    this.relay?.disconnect();
 
-    if (this.relay) {
-      this.relay.sendLeave();
-      this.relay.disconnect();
-    }
-
-    if (this.p2p) {
-      this.p2p.disconnect();
-    }
+    this.signaling = null;
+    this.p2p = null;
+    this.relay = null;
 
     useClientStore.getState().clearClients();
     useNetworkStore.getState().setConnectionStatus("disconnected");
   }
 
-  /**
-   * Broadcasts clipboard content to all connected peers.
-   * @param text - The clipboard content to send.
-   */
   async broadcastClipboard(text: string) {
     const payload: ClipboardPayload = {
       id: crypto.randomUUID(),
@@ -95,39 +134,33 @@ export class NetworkService {
 
     try {
       const encrypted = await CryptoService.encrypt(JSON.stringify(payload));
-      const transportMode = useSettingsStore.getState().transportMode;
+      const mode = useSettingsStore.getState().transportMode;
       const clients = useClientStore.getState().clients;
 
-      console.log(
-        `[Network] Broadcast. Mode: ${transportMode}, Clients: ${clients.length}`,
-      );
+      let sentViaRelay = false;
 
-      let sentP2PCount = 0;
+      for (const client of clients) {
+        let sentToClient = false;
 
-      if (transportMode !== "relay" && this.p2p) {
-        // P2PTransport.send without targetId broadcasts to all open channels
-        // We need to count how many actually got it. P2PTransport doesn't return that count.
-        // But we can check connected P2P clients in the store.
-        const connectedP2PClients = clients.filter(
-          (c) => c.status === "connected" && c.type === "p2p",
-        );
+        if (mode !== "relay" && this.p2p) {
+          if (client.type === "p2p" && client.status === "connected") {
+            await this.p2p.send(encrypted, client.id);
+            sentToClient = true;
+          }
+        }
 
-        if (connectedP2PClients.length > 0) {
-          await this.p2p.send(encrypted);
-          sentP2PCount = connectedP2PClients.length;
+        if (!sentToClient) {
+          if (mode === "relay" || mode === "auto") {
+            sentViaRelay = true;
+          }
         }
       }
 
-      const totalClients = clients.length;
-      const shouldRelay =
-        transportMode === "relay" ||
-        (transportMode === "auto" && sentP2PCount < totalClients);
-
-      if (shouldRelay && this.relay) {
-        this.relay.send(encrypted);
-        console.log(
-          `[Network] Sent via Relay (P2P coverage: ${sentP2PCount}/${totalClients})`,
-        );
+      if (sentViaRelay && this.relay) {
+        await this.relay.send(encrypted);
+        console.log(`[Network] Broadcasted via Relay`);
+      } else {
+        console.log(`[Network] Broadcasted via P2P only`);
       }
     } catch (e) {
       console.error("Broadcast failed", e);
@@ -135,130 +168,47 @@ export class NetworkService {
     }
   }
 
-  private trackMessageId(id: string) {
-    if (this.processedMessageIds.has(id)) return;
+  private handleWelcome(myId: PeerId, existingPeers: PeerId[]) {
+    useNetworkStore.getState().setMyId(myId);
+    useLogStore
+      .getState()
+      .addLog(`[Network] Joined as ${myId.slice(0, 8)}`, "success");
 
-    this.processedMessageIds.add(id);
-    this.messageIdHistory.push(id);
-
-    // Keep only last 100 messages
-    if (this.messageIdHistory.length > 100) {
-      const oldestId = this.messageIdHistory.shift();
-      if (oldestId) {
-        this.processedMessageIds.delete(oldestId);
-      }
-    }
-  }
-
-  private async handleServerMessage(msg: ServerMessage) {
-    const logStore = useLogStore.getState();
-    const netStore = useNetworkStore.getState();
-    const clientStore = useClientStore.getState();
-
-    switch (msg.type) {
-      case "WELCOME":
-        logStore.addLog(
-          `[Network] Joined room as ${msg.payload.myId.slice(0, 8)}`,
-          "success",
-        );
-        netStore.setMyId(msg.payload.myId);
-        clientStore.clearClients();
-
-        if (msg.payload.peers.length > 0) {
-          logStore.addLog(
-            `[Network] Discovered ${msg.payload.peers.length} existing clients`,
-            "info",
-          );
-          msg.payload.peers.forEach((pid) => this.handleFoundClient(pid));
-        }
-        break;
-
-      case "PEER_JOINED":
-        logStore.addLog(
-          `[Network] Client joined: ${msg.payload.peerId.slice(0, 8)}`,
-          "info",
-        );
-        this.handleFoundClient(msg.payload.peerId);
-        break;
-
-      case "PEER_LEFT":
-        logStore.addLog(
-          `[Network] Client left: ${msg.payload.peerId.slice(0, 8)}`,
-          "info",
-        );
-        clientStore.removeClient(msg.payload.peerId);
-        // P2PTransport handles cleanup on its own if needed, or we can explicit call disconnect?
-        // But P2P might not know peer left if connection was still open.
-        // It's safer to not manually close P2P unless we want to force it.
-        // Actually, if peer left room, P2P should be closed.
-        // But P2PTransport doesn't have "disconnectPeer". It clears all on disconnect.
-        // We probably need a removePeer in P2PTransport if we want to be strict.
-        // For now, let's rely on the transport clearing up naturally or lazily.
-        break;
-
-      case "SIGNAL_OFFER":
-        if (useSettingsStore.getState().transportMode !== "relay") {
-          await this.p2p?.handleOffer(
-            msg.senderId,
-            msg.sdp as RTCSessionDescriptionInit,
-          );
-        }
-        break;
-
-      case "SIGNAL_ANSWER":
-        await this.p2p?.handleAnswer(
-          msg.senderId,
-          msg.sdp as RTCSessionDescriptionInit,
-        );
-        break;
-
-      case "SIGNAL_ICE":
-        await this.p2p?.handleCandidate(
-          msg.senderId,
-          msg.candidate as RTCIceCandidateInit,
-        );
-        break;
-
-      case "RELAY_DATA":
-        await this.handleIncomingData(
-          msg.payload as EncryptedMessage,
-          msg.senderId,
-          "relay",
-        );
-        break;
-    }
-  }
-
-  private handleFoundClient(peerId: PeerId) {
     const { addClient, updateClient } = useClientStore.getState();
     const mode = useSettingsStore.getState().transportMode;
 
-    addClient(peerId);
-    updateClient(peerId, { status: "connected", type: "relay" });
+    existingPeers.forEach((peerId) => {
+      addClient(peerId);
+      updateClient(peerId, { status: "connected", type: "relay" });
 
-    if (mode !== "relay") {
-      const existingTimeout = this.pendingP2PTimeouts.get(peerId);
-      if (existingTimeout) clearTimeout(existingTimeout);
-
-      const delay = Math.random() * 1000;
-      const timeoutId = setTimeout(() => {
-        this.pendingP2PTimeouts.delete(peerId);
-        // Delegate connection initiation to P2PTransport
-        this.p2p?.connect(peerId);
-      }, delay);
-
-      this.pendingP2PTimeouts.set(peerId, timeoutId);
-    }
+      if (mode !== "relay" && this.p2p) {
+        this.p2p.connect(peerId);
+      }
+    });
   }
 
-  private async handleIncomingData(
+  private handlePeerJoined(peerId: PeerId) {
+    useClientStore.getState().addClient(peerId);
+    useClientStore
+      .getState()
+      .updateClient(peerId, { status: "connected", type: "relay" });
+    useLogStore
+      .getState()
+      .addLog(`[Network] Peer joined: ${peerId.slice(0, 8)}`, "info");
+  }
+
+  private handlePeerLeft(peerId: PeerId) {
+    useClientStore.getState().removeClient(peerId);
+    useLogStore
+      .getState()
+      .addLog(`[Network] Peer left: ${peerId.slice(0, 8)}`, "info");
+  }
+
+  private async handleIncomingMessage(
     encrypted: EncryptedMessage,
     senderId: PeerId,
     source: "p2p" | "relay",
   ) {
-    const logStore = useLogStore.getState();
-    const clipboardStore = useClipboardStore.getState();
-
     try {
       const json = await CryptoService.decrypt(encrypted);
       const payload: ClipboardPayload = JSON.parse(json);
@@ -266,21 +216,27 @@ export class NetworkService {
       if (this.processedMessageIds.has(payload.id)) {
         return;
       }
-
       this.trackMessageId(payload.id);
 
-      logStore.addLog(
-        `Received clip from ${senderId.slice(0, 8)} (${source})`,
-        "success",
-      );
-
-      clipboardStore.setLastRemoteClipboard(payload.content);
+      useLogStore
+        .getState()
+        .addLog(
+          `Received clip from ${senderId.slice(0, 8)} (${source})`,
+          "success",
+        );
+      useClipboardStore.getState().setLastRemoteClipboard(payload.content);
     } catch (e) {
       console.error("Decryption failed", e);
-      logStore.addLog(
-        `Decryption failed from ${senderId.slice(0, 8)}`,
-        "error",
-      );
+    }
+  }
+
+  private trackMessageId(id: string) {
+    if (this.processedMessageIds.has(id)) return;
+    this.processedMessageIds.add(id);
+    this.messageIdHistory.push(id);
+    if (this.messageIdHistory.length > 100) {
+      const oldest = this.messageIdHistory.shift();
+      if (oldest) this.processedMessageIds.delete(oldest);
     }
   }
 }
