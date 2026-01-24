@@ -9,11 +9,11 @@ import {
 } from "@mantine/core";
 import { IconDevices, IconUser } from "@tabler/icons-react";
 
-import { useAppStore } from "../../store/useAppStore";
+import { useClientStore } from "../../store/useClientStore";
 import { getStatusColor } from "../../utils/color";
 
 export function ClientsCard() {
-  const { clients } = useAppStore();
+  const { clients } = useClientStore();
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>

@@ -15,12 +15,12 @@ import {
 } from "@tabler/icons-react";
 
 import { useNetwork } from "../../contexts/network";
-import { useAppStore } from "../../store/useAppStore";
+import { useNetworkStore } from "../../store/useNetworkStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 
 export function InformationHeader() {
   const { roomId, serverUrl } = useSettingsStore();
-  const { myId } = useAppStore();
+  const { myId } = useNetworkStore();
   const networkService = useNetwork();
 
   return (

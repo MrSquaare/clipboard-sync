@@ -7,10 +7,10 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Setup } from "./components/setup/Setup";
 import { NetworkProvider } from "./contexts/network";
 import { useClipboard } from "./hooks/useClipboard";
-import { useAppStore } from "./store/useAppStore";
+import { useNetworkStore } from "./store/useNetworkStore";
 
 function AppContent() {
-  const connectionStatus = useAppStore((s) => s.connectionStatus);
+  const connectionStatus = useNetworkStore((s) => s.connectionStatus);
 
   useClipboard();
 

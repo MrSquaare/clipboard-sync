@@ -4,7 +4,8 @@ import {
   type ServerMessage,
 } from "@clipboard-sync/schemas";
 
-import { useAppStore } from "../store/useAppStore";
+import { useLogStore } from "../store/useLogStore";
+import { useNetworkStore } from "../store/useNetworkStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 
 import type { EncryptedMessage } from "./crypto";
@@ -55,7 +56,7 @@ export class RelayTransport implements Transport {
 
   private setupSocket(onSuccess: () => void) {
     const fullUrl = `${this.url}/ws?roomId=${this.roomId}`;
-    useAppStore
+    useLogStore
       .getState()
       .addLog(
         `[Relay] Connecting to: ${fullUrl} (Attempt ${this.retryCount + 1})`,
@@ -65,8 +66,8 @@ export class RelayTransport implements Transport {
     this.ws = new WebSocket(fullUrl);
 
     this.ws.onopen = () => {
-      useAppStore.getState().setConnectionStatus("connected");
-      useAppStore.getState().addLog("[Relay] Connected", "success");
+      useNetworkStore.getState().setConnectionStatus("connected");
+      useLogStore.getState().addLog("[Relay] Connected", "success");
       this.sendInternal({ type: "HELLO", payload: { version: 1 } });
 
       const pingInterval = useSettingsStore.getState().pingInterval;
@@ -89,7 +90,7 @@ export class RelayTransport implements Transport {
 
         if (!result.success) {
           console.error("Invalid server message", result.error);
-          useAppStore
+          useLogStore
             .getState()
             .addLog(
               `[Relay] Invalid Msg: ${result.error.issues[0].message}`,
@@ -101,13 +102,13 @@ export class RelayTransport implements Transport {
         // Handle async message processing safely
         void Promise.resolve(this.onMessage(result.data)).catch((err) => {
           console.error("Message handler failed", err);
-          useAppStore
+          useLogStore
             .getState()
             .addLog(`[Relay] Message Handler Error: ${err}`, "error");
         });
       } catch (e) {
         console.error("Failed to parse WS message", e);
-        useAppStore.getState().addLog(`[Relay] Parse Error: ${e}`, "error");
+        useLogStore.getState().addLog(`[Relay] Parse Error: ${e}`, "error");
       }
     };
 
@@ -116,7 +117,7 @@ export class RelayTransport implements Transport {
     };
 
     this.ws.onclose = (e) => {
-      useAppStore.getState().setConnectionStatus("disconnected");
+      useNetworkStore.getState().setConnectionStatus("disconnected");
 
       if (this.pingTimer) {
         window.clearInterval(this.pingTimer);
@@ -125,11 +126,11 @@ export class RelayTransport implements Transport {
       }
 
       if (this.isIntentionalClose) {
-        useAppStore.getState().addLog(`[Relay] Disconnected by user`, "info");
+        useLogStore.getState().addLog(`[Relay] Disconnected by user`, "info");
         return;
       }
 
-      useAppStore
+      useLogStore
         .getState()
         .addLog(`[Relay] Disconnected (Code: ${e.code}).`, "error");
 
@@ -138,7 +139,7 @@ export class RelayTransport implements Transport {
 
         this.retryCount++;
 
-        useAppStore
+        useLogStore
           .getState()
           .addLog(`[Relay] Reconnecting in ${delay}ms...`, "info");
 
@@ -146,7 +147,7 @@ export class RelayTransport implements Transport {
           this.setupSocket(onSuccess);
         }, delay);
       } else {
-        useAppStore
+        useLogStore
           .getState()
           .addLog(`[Relay] Max retries reached. Giving up.`, "error");
 
@@ -166,7 +167,7 @@ export class RelayTransport implements Transport {
       const json = JSON.stringify(msg);
       this.ws.send(json);
     } else {
-      useAppStore
+      useLogStore
         .getState()
         .addLog(`[Relay] TX Failed (Not Open): ${msg.type}`, "error");
     }
@@ -174,17 +175,9 @@ export class RelayTransport implements Transport {
 
   /**
    * Sends encrypted data via relay.
-   * Alias for send() to satisfy legacy usage or explicit intent.
-   */
-  sendData(payload: EncryptedMessage) {
-    this.send(payload);
-  }
-
-  /**
-   * Sends encrypted data via relay.
    * Implements Transport interface.
    */
-  async send(payload: EncryptedMessage): Promise<void> {
+  async send(payload: EncryptedMessage, _targetId?: string): Promise<void> {
     this.sendInternal({ type: "RELAY_DATA", payload });
   }
 

@@ -2,14 +2,19 @@ import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useRef } from "react";
 
 import { useNetwork } from "../contexts/network";
-import { useAppStore } from "../store/useAppStore";
+import { useClipboardStore } from "../store/useClipboardStore";
+import { useLogStore } from "../store/useLogStore";
+import { useNetworkStore } from "../store/useNetworkStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 
 export function useClipboard() {
   const networkService = useNetwork();
-  const isConnected = useAppStore((s) => s.connectionStatus === "connected");
-  const lastRemoteClipboard = useAppStore((s) => s.lastRemoteClipboard);
+  const isConnected = useNetworkStore(
+    (s) => s.connectionStatus === "connected",
+  );
+  const lastRemoteClipboard = useClipboardStore((s) => s.lastRemoteClipboard);
   const pollingInterval = useSettingsStore((s) => s.pollingInterval);
+  const { addLog } = useLogStore();
   const lastContent = useRef<string>("");
   const isWritingRemote = useRef(false);
 
@@ -29,14 +34,10 @@ export function useClipboard() {
         lastContent.current = lastRemoteClipboard;
 
         console.log("[Clipboard] Successfully wrote to system clipboard");
-        useAppStore
-          .getState()
-          .addLog(`[Clipboard] Wrote remote content`, "success");
+        addLog(`[Clipboard] Wrote remote content`, "success");
       } catch (err) {
         console.error("[Clipboard] Write failed", err);
-        useAppStore
-          .getState()
-          .addLog(`[Clipboard] Write failed: ${err}`, "error");
+        addLog(`[Clipboard] Write failed: ${err}`, "error");
       } finally {
         isWritingRemote.current = false;
         console.log("[Clipboard] Ready for local changes");
@@ -44,7 +45,7 @@ export function useClipboard() {
     };
 
     syncRemote();
-  }, [lastRemoteClipboard]);
+  }, [lastRemoteClipboard, addLog]);
 
   // Effect to poll for local changes
   useEffect(() => {
@@ -90,9 +91,7 @@ export function useClipboard() {
                 `[Clipboard] Local change detected: "${text.slice(0, 20)}..."`,
               );
               lastContent.current = text;
-              useAppStore
-                .getState()
-                .addLog(`[Clipboard] Local copy: ${text.length} chars`, "info");
+              addLog(`[Clipboard] Local copy: ${text.length} chars`, "info");
 
               await networkService.broadcastClipboard(text);
             } else {
@@ -104,9 +103,7 @@ export function useClipboard() {
         } catch (e) {
           console.error("[Clipboard] Read error:", e);
 
-          useAppStore
-            .getState()
-            .addLog(`[Clipboard] Read Error: ${e}`, "error");
+          addLog(`[Clipboard] Read Error: ${e}`, "error");
         }
       }, pollingInterval);
     };
@@ -117,5 +114,5 @@ export function useClipboard() {
       active = false;
       if (interval) window.clearInterval(interval);
     };
-  }, [isConnected, pollingInterval, networkService]);
+  }, [isConnected, pollingInterval, networkService, addLog]);
 }

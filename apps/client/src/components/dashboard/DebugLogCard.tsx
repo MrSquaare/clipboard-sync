@@ -1,10 +1,10 @@
 import { Card, Group, Text, ScrollArea, Table } from "@mantine/core";
 import { IconBug } from "@tabler/icons-react";
 
-import { useAppStore } from "../../store/useAppStore";
+import { useLogStore } from "../../store/useLogStore";
 
 export function DebugLogCard() {
-  const { logs } = useAppStore();
+  const { logs } = useLogStore();
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>

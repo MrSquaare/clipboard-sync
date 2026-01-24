@@ -20,8 +20,9 @@ export interface Transport {
   /**
    * Sends an encrypted message via the transport.
    * @param payload - The encrypted payload to send.
+   * @param targetId - Optional specific peer to send to.
    */
-  send(payload: EncryptedMessage): Promise<void>;
+  send(payload: EncryptedMessage, targetId?: PeerId): Promise<void>;
 
   /**
    * Checks if the transport is currently connected.
