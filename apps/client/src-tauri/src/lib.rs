@@ -14,9 +14,7 @@ struct EncryptedMessage {
 
 #[tauri::command]
 fn set_secret(secret: String, state: State<'_, CryptoState>) -> Result<(), String> {
-    let mut state_val = state.0.lock().map_err(|_| "Failed to lock mutex")?;
-    *state_val = Some(secret);
-    Ok(())
+    state.set_secret(secret).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -24,17 +22,17 @@ fn encrypt_message(
     payload: String,
     state: State<'_, CryptoState>,
 ) -> Result<EncryptedMessage, String> {
-    let state_val = state.0.lock().map_err(|_| "Failed to lock mutex")?;
-    let secret = state_val.as_ref().ok_or("Secret not set")?;
+    let secret = state.get_secret().map_err(|e| e.to_string())?;
+
     let salt_bytes = CryptoManager::generate_salt();
-    let salt_str = general_purpose::STANDARD.encode(&salt_bytes);
-    let key = CryptoManager::derive_key(secret, &salt_str)?;
-    let (ciphertext, nonce) = CryptoManager::encrypt(&key, payload.as_bytes())?;
+    let key = CryptoManager::derive_key(&secret, &salt_bytes).map_err(|e| e.to_string())?;
+    let (ciphertext, nonce) =
+        CryptoManager::encrypt(&key, payload.as_bytes()).map_err(|e| e.to_string())?;
 
     Ok(EncryptedMessage {
         iv: general_purpose::STANDARD.encode(nonce),
         ciphertext: general_purpose::STANDARD.encode(ciphertext),
-        salt: salt_str,
+        salt: general_purpose::STANDARD.encode(salt_bytes),
     })
 }
 
@@ -43,16 +41,21 @@ fn decrypt_message(
     message: EncryptedMessage,
     state: State<'_, CryptoState>,
 ) -> Result<String, String> {
-    let state_val = state.0.lock().map_err(|_| "Failed to lock mutex")?;
-    let secret = state_val.as_ref().ok_or("Secret not set")?;
-    let key = CryptoManager::derive_key(secret, &message.salt)?;
+    let secret = state.get_secret().map_err(|e| e.to_string())?;
+
+    let salt_bytes = general_purpose::STANDARD
+        .decode(&message.salt)
+        .map_err(|_| "Invalid Salt base64".to_string())?;
+
+    let key = CryptoManager::derive_key(&secret, &salt_bytes).map_err(|e| e.to_string())?;
+
     let nonce = general_purpose::STANDARD
         .decode(&message.iv)
         .map_err(|_| "Invalid IV base64".to_string())?;
     let ciphertext = general_purpose::STANDARD
         .decode(&message.ciphertext)
         .map_err(|_| "Invalid ciphertext base64".to_string())?;
-    let decrypted = CryptoManager::decrypt(&key, &ciphertext, &nonce)?;
+    let decrypted = CryptoManager::decrypt(&key, &ciphertext, &nonce).map_err(|e| e.to_string())?;
 
     String::from_utf8(decrypted).map_err(|_| "Decrypted data is not valid UTF-8".to_string())
 }
