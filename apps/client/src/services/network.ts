@@ -3,8 +3,8 @@ import type { ServerMessage, PeerId } from "@clipboard-sync/schemas";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 
-import { CryptoService, type EncryptedMessage } from "./CryptoService";
-import { RelayTransport } from "./RelayTransport";
+import { CryptoService, type EncryptedMessage } from "./crypto";
+import { RelayTransport } from "./relay-transport";
 
 interface ClipboardPayload {
   id: string;
@@ -12,11 +12,15 @@ interface ClipboardPayload {
   content: string;
 }
 
+/**
+ * Service managing network interactions, including P2P connections and Relay fallback.
+ */
 export class NetworkService {
   private relay: RelayTransport | null = null;
   private peerConnections: Map<PeerId, RTCPeerConnection> = new Map();
   private dataChannels: Map<PeerId, RTCDataChannel> = new Map();
   private processedMessageIds: Set<string> = new Set();
+  private messageIdHistory: string[] = []; // Rolling window for deduplication
   private p2pRetryCounts: Map<PeerId, number> = new Map();
   private pendingP2PTimeouts: Map<PeerId, ReturnType<typeof setTimeout>> =
     new Map();
@@ -28,6 +32,10 @@ export class NetworkService {
     ],
   };
 
+  /**
+   * Joins a room with the given secret.
+   * @param secret - The shared secret for encryption.
+   */
   async joinRoom(secret: string) {
     const { serverUrl, roomId } = useSettingsStore.getState();
 
@@ -42,6 +50,9 @@ export class NetworkService {
     await this.relay.connect();
   }
 
+  /**
+   * Disconnects from all peers and the relay server.
+   */
   disconnect() {
     this.pendingP2PTimeouts.forEach((timeout) => clearTimeout(timeout));
     this.pendingP2PTimeouts.clear();
@@ -60,6 +71,10 @@ export class NetworkService {
     useAppStore.getState().setConnectionStatus("disconnected");
   }
 
+  /**
+   * Broadcasts clipboard content to all connected peers.
+   * @param text - The clipboard content to send.
+   */
   async broadcastClipboard(text: string) {
     const payload: ClipboardPayload = {
       id: crypto.randomUUID(),
@@ -67,7 +82,7 @@ export class NetworkService {
       content: text,
     };
 
-    this.processedMessageIds.add(payload.id);
+    this.trackMessageId(payload.id);
 
     try {
       const encrypted = await CryptoService.encrypt(JSON.stringify(payload));
@@ -104,6 +119,21 @@ export class NetworkService {
     } catch (e) {
       console.error("Broadcast failed", e);
       useAppStore.getState().addLog(`Broadcast failed: ${e}`, "error");
+    }
+  }
+
+  private trackMessageId(id: string) {
+    if (this.processedMessageIds.has(id)) return;
+
+    this.processedMessageIds.add(id);
+    this.messageIdHistory.push(id);
+
+    // Keep only last 100 messages
+    if (this.messageIdHistory.length > 100) {
+      const oldestId = this.messageIdHistory.shift();
+      if (oldestId) {
+        this.processedMessageIds.delete(oldestId);
+      }
     }
   }
 
@@ -374,9 +404,7 @@ export class NetworkService {
       if (this.processedMessageIds.has(payload.id)) {
         return;
       }
-      this.processedMessageIds.add(payload.id);
-
-      if (this.processedMessageIds.size > 100) this.processedMessageIds.clear();
+      this.trackMessageId(payload.id);
 
       useAppStore
         .getState()
@@ -385,9 +413,8 @@ export class NetworkService {
           "success",
         );
 
-      window.dispatchEvent(
-        new CustomEvent("clipboard-remote-update", { detail: payload.content }),
-      );
+      // Use Store instead of Window Event
+      useAppStore.getState().setLastRemoteClipboard(payload.content);
     } catch (e) {
       console.error("Decryption failed", e);
       useAppStore
@@ -396,5 +423,3 @@ export class NetworkService {
     }
   }
 }
-
-export const networkService = new NetworkService();

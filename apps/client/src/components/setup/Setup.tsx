@@ -27,10 +27,11 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 
-import { networkService } from "../services/NetworkService";
-import { useSettingsStore } from "../store/useSettingsStore";
+import { useNetwork } from "../../contexts/network";
+import { useSettingsStore } from "../../store/useSettingsStore";
 
 export function Setup() {
+  const networkService = useNetwork();
   const {
     serverUrl,
     setServerUrl,

@@ -22,6 +22,7 @@ interface AppState {
   myId: PeerId | null;
   clients: Client[];
   logs: LogEntry[];
+  lastRemoteClipboard: string | null;
 
   setConnectionStatus: (status: AppState["connectionStatus"]) => void;
   setMyId: (id: PeerId) => void;
@@ -30,6 +31,7 @@ interface AppState {
   removeClient: (id: PeerId) => void;
   clearClients: () => void;
   addLog: (message: string, type?: LogEntry["type"]) => void;
+  setLastRemoteClipboard: (content: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -37,10 +39,12 @@ export const useAppStore = create<AppState>((set) => ({
   myId: null,
   clients: [],
   logs: [],
+  lastRemoteClipboard: null,
 
   setConnectionStatus: (status) => set({ connectionStatus: status }),
   setMyId: (myId) => set({ myId }),
   clearClients: () => set({ clients: [] }),
+  setLastRemoteClipboard: (content) => set({ lastRemoteClipboard: content }),
 
   addClient: (id) =>
     set((state) => {
