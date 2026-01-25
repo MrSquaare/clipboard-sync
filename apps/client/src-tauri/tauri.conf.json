@@ -19,7 +19,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:"
+      "csp": {
+        "default-src": "'self'",
+        "connect-src": "'self' ipc://localhost ws: wss:",
+        "img-src": "'self' asset: https://asset.localhost data:",
+        "style-src": "'self' 'unsafe-inline'"
+      }
     }
   },
   "bundle": {
