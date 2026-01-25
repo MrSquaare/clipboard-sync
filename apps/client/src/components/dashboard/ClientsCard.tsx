@@ -29,40 +29,42 @@ export function ClientsCard() {
         </Group>
       </Card.Section>
 
-      <Stack gap={"sm"} mt={"md"}>
-        {clients.length === 0 ? (
-          <Text c={"dimmed"} py={"xl"} ta={"center"}>
-            No other clients connected.
-          </Text>
-        ) : (
-          clients.map((p) => (
-            <Paper bg={"dark.8"} key={p.id} p={"sm"} withBorder>
-              <Group justify={"space-between"}>
-                <Group gap={"xs"}>
-                  <ThemeIcon color={"gray"} size={"sm"} variant={"light"}>
-                    <IconUser size={12} />
-                  </ThemeIcon>
-                  <Text fw={500} size={"sm"}>
-                    {p.id.slice(0, 8)}...
-                  </Text>
+      <Card.Section inheritPadding py={"xs"}>
+        <Stack gap={"sm"}>
+          {clients.length === 0 ? (
+            <Text c={"dimmed"} py={"xl"} ta={"center"}>
+              No other client connected.
+            </Text>
+          ) : (
+            clients.map((p) => (
+              <Paper bg={"dark.8"} key={p.id} p={"sm"} withBorder>
+                <Group justify={"space-between"}>
+                  <Group gap={"xs"}>
+                    <ThemeIcon color={"gray"} size={"sm"} variant={"light"}>
+                      <IconUser size={12} />
+                    </ThemeIcon>
+                    <Text fw={500} size={"sm"}>
+                      {p.id.slice(0, 8)}...
+                    </Text>
+                  </Group>
+                  <Group gap={"xs"}>
+                    <Badge
+                      color={getStatusColor(p.status)}
+                      size={"sm"}
+                      variant={"dot"}
+                    >
+                      {p.status}
+                    </Badge>
+                    <Badge color={"gray"} size={"sm"} variant={"outline"}>
+                      {p.type}
+                    </Badge>
+                  </Group>
                 </Group>
-                <Group gap={"xs"}>
-                  <Badge
-                    color={getStatusColor(p.status)}
-                    size={"sm"}
-                    variant={"dot"}
-                  >
-                    {p.status}
-                  </Badge>
-                  <Badge color={"gray"} size={"sm"} variant={"outline"}>
-                    {p.type}
-                  </Badge>
-                </Group>
-              </Group>
-            </Paper>
-          ))
-        )}
-      </Stack>
+              </Paper>
+            ))
+          )}
+        </Stack>
+      </Card.Section>
     </Card>
   );
 }

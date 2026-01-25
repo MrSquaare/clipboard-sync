@@ -1,5 +1,5 @@
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { useNetwork } from "../contexts/network";
 import { useClipboardStore } from "../store/useClipboardStore";
@@ -18,22 +18,19 @@ export function useClipboard() {
   const lastContent = useRef<string>("");
   const isWritingRemote = useRef(false);
 
-  // Effect to handle remote clipboard updates
-  useEffect(() => {
-    if (!lastRemoteClipboard) return;
-
-    const syncRemote = async () => {
+  const syncRemote = useCallback(
+    async (text: string) => {
       console.log(
-        `[Clipboard] Received remote update: "${lastRemoteClipboard.slice(0, 20)}..."`,
+        `[Clipboard] Received remote update: "${text.slice(0, 20)}..."`,
       );
 
       isWritingRemote.current = true;
 
       try {
-        await writeText(lastRemoteClipboard);
-        lastContent.current = lastRemoteClipboard;
+        await writeText(text);
+        lastContent.current = text;
 
-        console.log("[Clipboard] Successfully wrote to system clipboard");
+        console.log("[Clipboard] Wrote remote content");
         addLog(`[Clipboard] Wrote remote content`, "success");
       } catch (err) {
         console.error("[Clipboard] Write failed", err);
@@ -42,24 +39,12 @@ export function useClipboard() {
         isWritingRemote.current = false;
         console.log("[Clipboard] Ready for local changes");
       }
-    };
+    },
+    [addLog],
+  );
 
-    syncRemote();
-  }, [lastRemoteClipboard, addLog]);
-
-  // Effect to poll for local changes
-  useEffect(() => {
-    console.log(`[Clipboard] Hook mounted. Connected? ${isConnected}`);
-
-    if (!isConnected) {
-      console.log("[Clipboard] Not connected. Sync paused.");
-      return;
-    }
-
-    let interval: number | undefined;
-    let active = true;
-
-    const setupPolling = async () => {
+  const setupPolling = useCallback(
+    async (active: boolean) => {
       try {
         const text = await readText();
 
@@ -79,7 +64,7 @@ export function useClipboard() {
         `[Clipboard] Starting polling interval (${pollingInterval}ms)...`,
       );
 
-      interval = window.setInterval(async () => {
+      return setInterval(async () => {
         try {
           const text = await readText();
 
@@ -87,10 +72,10 @@ export function useClipboard() {
 
           if (text && text !== lastContent.current) {
             if (!isWritingRemote.current) {
+              lastContent.current = text;
               console.log(
                 `[Clipboard] Local change detected: "${text.slice(0, 20)}..."`,
               );
-              lastContent.current = text;
               addLog(`[Clipboard] Local copy: ${text.length} chars`, "info");
 
               await networkService.broadcastClipboard(text);
@@ -106,13 +91,34 @@ export function useClipboard() {
           addLog(`[Clipboard] Read Error: ${e}`, "error");
         }
       }, pollingInterval);
-    };
+    },
+    [addLog, networkService, pollingInterval],
+  );
 
-    setupPolling();
+  useEffect(() => {
+    if (!lastRemoteClipboard) return;
+
+    syncRemote(lastRemoteClipboard);
+  }, [lastRemoteClipboard, syncRemote]);
+
+  useEffect(() => {
+    console.log(`[Clipboard] Hook mounted. Connected? ${isConnected}`);
+
+    if (!isConnected) {
+      console.log("[Clipboard] Not connected. Sync paused.");
+      return;
+    }
+
+    let active = true;
+    let interval: number | undefined;
+
+    setupPolling(active).then((value) => {
+      interval = value;
+    });
 
     return () => {
       active = false;
-      if (interval) window.clearInterval(interval);
+      clearInterval(interval);
     };
-  }, [isConnected, pollingInterval, networkService, addLog]);
+  }, [isConnected, setupPolling]);
 }

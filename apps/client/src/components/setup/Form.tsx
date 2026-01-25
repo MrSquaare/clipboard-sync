@@ -7,9 +7,7 @@ import {
   Switch,
   Paper,
   Stack,
-  Group,
   Collapse,
-  Anchor,
   Alert,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -23,51 +21,44 @@ import {
   IconChevronDown,
   IconChevronRight,
 } from "@tabler/icons-react";
+import { zod4Resolver } from "mantine-form-zod-resolver";
+import { z } from "zod";
 
-import {
-  useSettingsStore,
-  type TransportMode,
-} from "../../store/useSettingsStore";
+const formSchema = z.object({
+  serverUrl: z.url({
+    protocol: /^(ws|wss)$/,
+    message: "Server URL must be a valid URL starting with ws:// or wss://",
+  }),
+  roomId: z.string().min(1, "Room ID is required"),
+  secret: z.string().min(1, "Secret Key is required"),
+  transportMode: z.enum(
+    ["auto", "p2p", "relay"],
+    "Transport mode must be one of auto, p2p, or relay",
+  ),
+  pollingInterval: z
+    .number("Polling interval must be a number")
+    .min(100, "Polling interval must be at least 100ms"),
+  pingInterval: z
+    .number("Ping interval must be a number")
+    .min(5000, "Ping interval must be at least 5000ms"),
+  developerMode: z.boolean(),
+});
 
-export interface ConnectFormValues {
-  serverUrl: string;
-  roomId: string;
-  secret: string;
-  transportMode: TransportMode;
-  pollingInterval: number;
-  pingInterval: number;
-  developerMode: boolean;
-}
+export type FormValues = z.infer<typeof formSchema>;
 
-interface ConnectFormProps {
-  onSubmit: (values: ConnectFormValues) => Promise<void>;
+export type FormProps = {
+  initialValues?: FormValues;
+  onSubmit: (values: FormValues) => Promise<void>;
   loading: boolean;
   error: string | null;
-}
+};
 
-export function ConnectForm({ onSubmit, loading, error }: ConnectFormProps) {
-  const settings = useSettingsStore();
+export function Form({ initialValues, onSubmit, loading, error }: FormProps) {
   const [showAdvanced, { toggle: toggleAdvanced }] = useDisclosure(false);
 
-  const form = useForm<ConnectFormValues>({
-    initialValues: {
-      serverUrl: settings.serverUrl,
-      roomId: settings.roomId,
-      secret: "",
-      transportMode: settings.transportMode,
-      pollingInterval: settings.pollingInterval,
-      pingInterval: settings.pingInterval,
-      developerMode: settings.developerMode,
-    },
-    validate: {
-      serverUrl: (value) => (!value ? "Server URL is required" : null),
-      roomId: (value) => (!value ? "Room ID is required" : null),
-      secret: (value) => (!value ? "Secret Key is required" : null),
-      pollingInterval: (value) =>
-        value < 100 ? "Polling interval must be at least 100ms" : null,
-      pingInterval: (value) =>
-        value < 5000 ? "Ping interval must be at least 5000ms" : null,
-    },
+  const form = useForm<FormValues>({
+    initialValues: initialValues,
+    validate: zod4Resolver(formSchema),
   });
 
   const handleUseDefaultUrl = () => {
@@ -78,22 +69,19 @@ export function ConnectForm({ onSubmit, loading, error }: ConnectFormProps) {
     <form onSubmit={form.onSubmit(onSubmit)}>
       <Stack gap={"md"}>
         <TextInput
-          description={
-            <Group gap={0} justify={"space-between"}>
-              <span>WebSocket Server Address</span>
-              <Anchor
-                component={"button"}
-                onClick={handleUseDefaultUrl}
-                size={"xs"}
-                type={"button"}
-              >
-                Use Default
-              </Anchor>
-            </Group>
-          }
           label={"Server URL"}
           leftSection={<IconServer size={16} />}
           placeholder={"wss://..."}
+          rightSection={
+            <Button
+              onClick={handleUseDefaultUrl}
+              size={"compact-xs"}
+              variant={"light"}
+            >
+              Reset
+            </Button>
+          }
+          rightSectionWidth={64}
           withAsterisk
           {...form.getInputProps("serverUrl")}
         />
@@ -144,7 +132,7 @@ export function ConnectForm({ onSubmit, loading, error }: ConnectFormProps) {
           <Paper bg={"transparent"} mt={"sm"} p={"xs"} withBorder>
             <Stack gap={"sm"}>
               <NumberInput
-                label={"Clipboard Polling (ms)"}
+                label={"Polling Interval (ms)"}
                 min={100}
                 {...form.getInputProps("pollingInterval")}
               />

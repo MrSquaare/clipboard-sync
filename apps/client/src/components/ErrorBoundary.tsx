@@ -1,4 +1,4 @@
-import { Alert, Container, Title, Text, Button, Center } from "@mantine/core";
+import { Alert, Box, Title, Text, Button, Center, Code } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
@@ -28,30 +28,29 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Container py={"xl"} size={"sm"}>
-          <Center h={"100vh"}>
+        <Center h={"100vh"} p={"md"}>
+          <Box maw={800} w={"100%"}>
             <Alert
               color={"red"}
               icon={<IconAlertCircle />}
-              title={"Application Error"}
+              title={<Title order={4}>Something went wrong</Title>}
               variant={"light"}
             >
-              <Title mb={"md"} order={4}>
-                Something went wrong
-              </Title>
-              <Text mb={"lg"} size={"sm"}>
-                {this.state.error?.message || "An unexpected error occurred."}
+              <Text mb={"lg"}>
+                <Code>
+                  {this.state.error?.message || "An unexpected error occurred."}
+                </Code>
               </Text>
               <Button
                 color={"red"}
                 onClick={() => window.location.reload()}
                 variant={"outline"}
               >
-                Reload Application
+                Restart
               </Button>
             </Alert>
-          </Center>
-        </Container>
+          </Box>
+        </Center>
       );
     }
 

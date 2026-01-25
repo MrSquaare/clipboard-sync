@@ -1,10 +1,10 @@
-import { Paper, Title, Box } from "@mantine/core";
+import { Paper, Title, Box, Center } from "@mantine/core";
 import { useState } from "react";
 
 import { useNetwork } from "../../contexts/network";
 import { useSettingsStore } from "../../store/useSettingsStore";
 
-import { ConnectForm, type ConnectFormValues } from "./ConnectForm";
+import { Form, type FormValues } from "./Form";
 
 export function Setup() {
   const networkService = useNetwork();
@@ -13,11 +13,10 @@ export function Setup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (values: ConnectFormValues) => {
+  const handleSubmit = async (values: FormValues) => {
     setLoading(true);
     setError(null);
 
-    // Update store with form values
     settings.setServerUrl(values.serverUrl);
     settings.setRoomId(values.roomId);
     settings.setTransportMode(values.transportMode);
@@ -35,13 +34,28 @@ export function Setup() {
   };
 
   return (
-    <Box maw={400} mt={"xl"} mx={"auto"}>
-      <Paper p={"md"} radius={"md"} shadow={"sm"} withBorder>
-        <Title mb={"lg"} order={2} ta={"center"}>
-          Connect to Room
-        </Title>
-        <ConnectForm error={error} loading={loading} onSubmit={handleSubmit} />
-      </Paper>
-    </Box>
+    <Center h={"100vh"} p={"md"}>
+      <Box maw={600} w={"100%"}>
+        <Paper p={"md"} radius={"md"} shadow={"sm"} withBorder>
+          <Title mb={"lg"} order={2} ta={"center"}>
+            Connect to Room
+          </Title>
+          <Form
+            error={error}
+            initialValues={{
+              serverUrl: settings.serverUrl,
+              roomId: settings.roomId,
+              secret: "",
+              transportMode: settings.transportMode,
+              pollingInterval: settings.pollingInterval,
+              pingInterval: settings.pingInterval,
+              developerMode: settings.developerMode,
+            }}
+            loading={loading}
+            onSubmit={handleSubmit}
+          />
+        </Paper>
+      </Box>
+    </Center>
   );
 }

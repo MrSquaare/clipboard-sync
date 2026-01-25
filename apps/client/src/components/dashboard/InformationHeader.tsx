@@ -32,9 +32,9 @@ export function InformationHeader() {
           </ThemeIcon>
           <div>
             <Title order={3}>Room: {roomId}</Title>
-            <Group gap={"xs"}>
-              <IconServer size={14} style={{ opacity: 0.5 }} />
-              <Text c={"dimmed"} size={"xs"}>
+            <Group gap={4}>
+              <IconServer color={"var(--mantine-color-dark-2)"} size={14} />
+              <Text c={"dark.2"} size={"xs"}>
                 {serverUrl}
               </Text>
             </Group>
@@ -42,15 +42,15 @@ export function InformationHeader() {
         </Group>
 
         <Group>
-          <Paper bg={"dark.8"} px={"xs"} py={4} radius={"sm"} withBorder>
-            <Group gap={6}>
-              <IconUser size={14} style={{ opacity: 0.7 }} />
-              <Text fw={500} size={"sm"} span>
+          <Paper bg={"dark.8"} p={7} radius={"sm"} withBorder>
+            <Group gap={"xs"}>
+              <IconUser size={14} />
+              <Text size={"sm"} span>
                 ID:
+                <Code bg={"transparent"} c={"dark.2"}>
+                  {myId?.slice(0, 8)}
+                </Code>
               </Text>
-              <Code bg={"transparent"} c={"dimmed"}>
-                {myId?.slice(0, 8)}
-              </Code>
             </Group>
           </Paper>
           <Button

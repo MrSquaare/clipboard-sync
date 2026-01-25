@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 
 import { NetworkService } from "../../services/network";
 
 import { NetworkContext } from "./context";
 
-export function NetworkProvider({ children }: { children: React.ReactNode }) {
+export function NetworkProvider({ children }: PropsWithChildren) {
   const [networkService] = useState(() => new NetworkService());
 
   useEffect(() => {

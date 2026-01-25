@@ -1,4 +1,12 @@
-import { Card, Group, Text, ScrollArea, Table } from "@mantine/core";
+import {
+  Card,
+  Group,
+  Text,
+  ScrollArea,
+  Table,
+  CopyButton,
+  Button,
+} from "@mantine/core";
 import { IconBug } from "@tabler/icons-react";
 
 import { useLogStore } from "../../store/useLogStore";
@@ -9,30 +17,40 @@ export function DebugLogCard() {
   return (
     <Card padding={"lg"} radius={"md"} shadow={"sm"} withBorder>
       <Card.Section inheritPadding py={"xs"} withBorder>
-        <Group gap={"xs"}>
-          <IconBug size={20} />
-          <Text fw={500}>Debug Log</Text>
+        <Group justify={"space-between"}>
+          <Group gap={"xs"}>
+            <IconBug size={20} />
+            <Text fw={500}>Debug Log</Text>
+          </Group>
+          <CopyButton value={JSON.stringify(logs, null, 2)}>
+            {({ copied, copy }) => (
+              <Button
+                color={"gray"}
+                onClick={copy}
+                size={"compact-sm"}
+                variant={"light"}
+              >
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            )}
+          </CopyButton>
         </Group>
       </Card.Section>
 
-      <Card.Section>
-        <ScrollArea bg={"#1e1e1e"} h={400} offsetScrollbars type={"auto"}>
+      <Card.Section bg={"dark.8"}>
+        <ScrollArea h={400} type={"auto"}>
           <Table
             highlightOnHover
+            highlightOnHoverColor={"dark.6"}
             style={{ tableLayout: "fixed" }}
             verticalSpacing={"xs"}
+            withColumnBorders
           >
             <Table.Tbody>
               {logs.map((log) => (
                 <Table.Tr key={log.id}>
-                  <Table.Td
-                    style={{
-                      verticalAlign: "top",
-                      borderRight: "1px solid var(--mantine-color-dark-6)",
-                    }}
-                    w={100}
-                  >
-                    <Text c={"dimmed"} ff={"monospace"} size={"xs"}>
+                  <Table.Td w={100}>
+                    <Text c={"dark.2"} ff={"monospace"} size={"xs"}>
                       {new Date(log.timestamp).toLocaleTimeString([], {
                         hour12: false,
                         hour: "2-digit",
@@ -48,7 +66,7 @@ export function DebugLogCard() {
                           ? "red.4"
                           : log.type === "success"
                             ? "green.4"
-                            : "gray.5"
+                            : "dark.1"
                       }
                       ff={"monospace"}
                       size={"xs"}
