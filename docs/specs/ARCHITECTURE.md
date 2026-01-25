@@ -42,4 +42,4 @@ To ensure "Easy Setup" while maintaining security:
 1.  **Device A (Creator)**: Generates a random `Room ID` and a `Secret Key`.
 2.  **User Action**: User enters (or scans) this `Room ID` and `Secret Key` on **Device B**.
 3.  **Connection**: Both devices connect to the Relay Server using the `Room ID`.
-4.  **Verification**: Devices prove possession of the `Secret Key` (via Challenge-Response or Pre-Shared Key auth) without sending the key itself.
+4.  **Verification**: Devices attempt to decrypt received messages using the `Secret Key`. If decryption fails (wrong key), the message is ignored.

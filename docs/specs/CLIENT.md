@@ -1,45 +1,46 @@
 # Client Architecture
 
 ## Overview
-The client is a **Tauri v2** application. It combines a Rust backend for critical system operations (cryptography, clipboard APIs, networking) with a React frontend for the UI.
+The client is a **Tauri v2** application. It combines a Rust backend for critical system operations (cryptography) with a React frontend for the UI, networking, and application logic.
 
 ## Structure
 
-### 1. Rust Backend (`src-tauri`)
-The "heavy lifting" happens here to ensure performance and security.
+### 1. Backend (`src-tauri`)
+The "secure enclave" for cryptographic operations.
 
-- **Clipboard Monitor**:
-  - Runs on a separate thread.
-  - Polling or Event-based (depending on OS support) detection of clipboard changes.
-  - *Constraint*: Must distinguish between "user copied" and "app wrote to clipboard" to prevent loops.
 - **Crypto Module**:
   - Implementation of AES-256-GCM.
   - Handles Key Derivation (Argon2id).
-  - **NEVER** exposes the raw secret key to the webview (Frontend) if possible, keeping it in protected memory.
-- **Network Manager**:
-  - Manages the WebSocket connection to the Relay.
-  - Manages WebRTC PeerConnections (using a Rust WebRTC crate or passing signaling to frontend JS WebRTC). 
-  - *Decision*: Managing WebRTC in Rust (via `webrtc-rs`) offers better stability and control than the webview, but JS WebRTC is easier to implement. *Recommendation*: Start with JS WebRTC (Frontend) for P2P, but handle Encryption in Rust.
+  - **State**: Stores the `Secret Key` in protected memory (Mutex).
+  - **Commands**: Exposes `encrypt_message`, `decrypt_message`, and `set_secret` to the frontend.
 
 ### 2. Frontend (`src`)
-The UI and orchestration layer.
+The UI, orchestration layer, and networking hub.
 
-- **State Management**: Holds the list of connected peers, connection status, and logs.
-- **Settings UI**:
-  - "Connect to Room" form.
-  - "Generate New Room" view.
-  - Toggle specific settings (e.g., "Receive only", "Send only").
-- **IPC Layer**:
-  - Communicates with Rust backend via Tauri Commands.
-  - Events: `clipboard-update`, `peer-status-update`.
+- **Clipboard Monitor**:
+  - Polls the system clipboard using the Tauri Clipboard plugin.
+  - Detects changes and triggers synchronization.
+  - Handles "remote write" logic to prevent clipboard loops (echoing back what was just received).
+- **Network Manager**:
+  - Manages the WebSocket client to the Signaling/Relay Server.
+  - Manages the WebRTC peer communication.
+  - Manages the WebSocket Relay communication.
+  - Handles the hybrid logic (routing messages via P2P or Relay).
+- **State Management**:
+  - Save non-sensitive user configuration.
+  - Tracks connected peers and their status.
+- **UI**:
+  - Setup wizard for entering `Room ID` and `Secret Key`.
+  - Dashboard with information and connected clients.
 
 ## Security Boundary
-- **Sensitive Data**: The `Secret Key` should ideally remain in the Rust Backend.
+- **Sensitive Data**: The `Secret Key` is sent to backend once during setup and stored there.
 - **Operation**: 
-  1. Frontend receives "User setup config". Passes it to Rust.
-  2. Rust stores keys in memory.
-  3. When clipboard changes, Rust encrypts data -> Sends ciphertext to Frontend -> Frontend sends via WebRTC/WS. 
-  4. *Alternatively*: Rust handles the networking entirely for maximum security.
+  1. Frontend detects clipboard change.
+  2. Frontend sends plaintext to backend.
+  3. Backend derives key (if needed), encrypts data, and returns IV + ciphertext + Salt.
+  4. Frontend broadcasts encrypted payload via WebRTC/WS.
+  5. Frontend passes encrypted payload received to backend for decryption.
 
 ## Multi-Device Logic
 - The client maintains a list of `Active Peers`.
