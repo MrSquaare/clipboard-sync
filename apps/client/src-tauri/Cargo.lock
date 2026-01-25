@@ -541,7 +541,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "client"
+name = "clipboard-sync-client"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
