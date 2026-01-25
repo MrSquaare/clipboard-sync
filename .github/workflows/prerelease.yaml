@@ -29,7 +29,10 @@ jobs:
         with:
           setup-tauri: "true"
 
-      - name: Build and release Tauri app
+      - name: Build
+        run: pnpm build --filter @clipboard-sync/client
+
+      - name: Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,6 +52,9 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
+
+      - name: Build
+        run: pnpm build --filter @clipboard-sync/server
 
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
