@@ -36,6 +36,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENV: "preview"
         with:
           projectPath: ./apps/client
           tagName: app-v__VERSION__
