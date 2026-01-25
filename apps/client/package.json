@@ -3,6 +3,7 @@
   "name": "@clipboard-sync/client",
   "type": "module",
   "scripts": {
+    "tauri": "tauri",
     "dev:ts": "vite",
     "dev": "tauri dev",
     "build:ts": "tsc && vite build",
