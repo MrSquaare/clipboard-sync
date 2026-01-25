@@ -16,10 +16,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - macos-latest
-          - ubuntu-22.04
-          - windows-latest
+        include:
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest"
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v6
@@ -30,7 +35,7 @@ jobs:
           setup-tauri: "true"
 
       - name: Build
-        run: pnpm build --filter @clipboard-sync/client
+        run: pnpm turbo run build --filter=@clipboard-sync/client... --filter=!@clipboard-sync/client
 
       - name: Release
         uses: tauri-apps/tauri-action@v0
@@ -44,7 +49,7 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: true
-          args: ${{ runner.os == 'macOS' && '--target aarch64-apple-darwin --target x86_64-apple-darwin' || '' }}
+          args: ${{ matrix.args }}
 
   deploy-server:
     runs-on: ubuntu-22.04
@@ -55,7 +60,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Build
-        run: pnpm build --filter @clipboard-sync/server
+        run: pnpm turbo run build --filter=@clipboard-sync/server... --filter=!@clipboard-sync/server
 
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
