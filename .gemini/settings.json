@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "general": {
+    "previewFeatures": true
+  },
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "mantine": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hakxel/mantine-ui-server"
+      ],
+      "env": {
+        "MANTINE_VERSION": "8.3.13"
+      }
+    }
+  }
+}

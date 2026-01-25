@@ -1,0 +1,40 @@
+name: "Setup environment"
+description: "Setup environment"
+
+inputs:
+  setup-tauri:
+    description: "Whether to setup the Rust toolchain and Tauri dependencies."
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: lts/*
+        cache: "pnpm"
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Setup Rust toolchain
+      if: ${{ inputs.setup-tauri == 'true' }}
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        rust-src-dir: apps/client/src-tauri/src
+        components: "clippy,rustfmt"
+        target: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+    - name: Install Tauri dependencies
+      if: ${{ runner.os == 'Linux' && inputs.setup-tauri == 'true' }}
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install

@@ -1,0 +1,41 @@
+name: "Pull Request"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client-checks:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+        with:
+          setup-tauri: "true"
+
+      - name: Build
+        run: pnpm build --filter @clipboard-sync/client
+
+      - name: Lint
+        run: pnpm lint --filter @clipboard-sync/client
+
+  server-checks:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build
+        run: pnpm build --filter @clipboard-sync/server
+
+      - name: Lint
+        run: pnpm lint --filter @clipboard-sync/server

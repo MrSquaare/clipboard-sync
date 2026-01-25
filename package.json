@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "name": "clipboard-sync",
+  "scripts": {
+    "dev": "turbo dev --continue",
+    "build": "turbo build",
+    "lint": "turbo lint --continue",
+    "lint:fix": "turbo lint:fix --continue",
+    "clean": "turbo clean --continue && rm -rf node_modules/.cache/ .turbo/ **/*/.turbo/",
+    "deps:update": "taze",
+    "deps:upgrade": "taze -w"
+  },
+  "packageManager": "pnpm@10.28.1",
+  "devDependencies": {
+    "taze": "^19.9.2",
+    "turbo": "^2.7.5"
+  }
+}

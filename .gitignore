@@ -1,0 +1,11 @@
+# Node
+node_modules/
+
+# pnpm
+.pnpm-store
+
+# Turborepo
+.turbo/
+
+# Misc
+.DS_Store
