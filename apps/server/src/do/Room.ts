@@ -5,17 +5,23 @@ import {
 } from "@clipboard-sync/schemas";
 import { DurableObject } from "cloudflare:workers";
 
-import { logger } from "../utils/logger";
+import { Logger } from "../utils/logger";
 
 interface SessionAttachment {
   id: PeerId;
-  hasLeft?: boolean;
 }
 
-export class ClipboardRoom extends DurableObject {
+export class Room extends DurableObject<CloudflareBindings> {
+  private logger: Logger;
+
+  constructor(ctx: DurableObjectState, env: CloudflareBindings) {
+    super(ctx, env);
+    this.logger = new Logger(env.LOG_LEVEL);
+  }
+
   async fetch(request: Request): Promise<Response> {
     const upgradeHeader = request.headers.get("Upgrade");
-    if (!upgradeHeader || upgradeHeader !== "websocket") {
+    if (upgradeHeader !== "websocket") {
       return new Response("Expected Upgrade: websocket", { status: 426 });
     }
 
@@ -28,14 +34,11 @@ export class ClipboardRoom extends DurableObject {
 
     server.serializeAttachment({ id: peerId });
 
-    logger.info(`[Room] New peer connected`, { peerId });
+    this.logger.info(`[Room] New peer connected`, { peerId });
 
-    const peers = this.ctx
-      .getWebSockets()
-      .map((ws) => (ws.deserializeAttachment() as SessionAttachment)?.id)
-      .filter((id) => id && id !== peerId) as PeerId[];
+    const peers = this.getPeerIds(peerId);
 
-    logger.debug(`[Room] Current peers in room`, {
+    this.logger.debug(`[Room] Current peers in room`, {
       count: peers.length,
       peers,
     });
@@ -50,37 +53,25 @@ export class ClipboardRoom extends DurableObject {
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     const attachment = ws.deserializeAttachment() as SessionAttachment;
+
     if (!attachment) return;
 
     try {
-      const rawMsg = JSON.parse(message as string);
-      const result = ClientMessageSchema.safeParse(rawMsg);
+      const raw = JSON.parse(message.toString());
+      const result = ClientMessageSchema.safeParse(raw);
 
       if (!result.success) {
-        logger.warn(`[Room] Invalid message from ${attachment.id}`, {
+        this.logger.warn(`[Room] Invalid message from ${attachment.id}`, {
           error: result.error,
         });
         return;
       }
 
       const msg = result.data;
-      logger.debug(`[Room] RX from ${attachment.id}: ${msg.type}`);
+
+      this.logger.debug(`[Room] Message from ${attachment.id}: ${msg.type}`);
 
       switch (msg.type) {
-        case "PING":
-          this.send(ws, { type: "PONG" });
-          break;
-
-        case "LEAVE":
-          attachment.hasLeft = true;
-          ws.serializeAttachment(attachment);
-          this.broadcast(
-            { type: "PEER_LEFT", payload: { peerId: attachment.id } },
-            ws,
-          );
-          ws.close(1000, "Left by user");
-          break;
-
         case "HELLO":
           this.broadcast(
             { type: "PEER_JOINED", payload: { peerId: attachment.id } },
@@ -88,17 +79,18 @@ export class ClipboardRoom extends DurableObject {
           );
           break;
 
-        case "SIGNAL_OFFER":
-          this.forwardTo(msg.targetId, {
-            type: "SIGNAL_OFFER",
-            senderId: attachment.id,
-            sdp: msg.sdp,
-          });
+        case "PING":
+          this.send(ws, { type: "PONG" });
           break;
 
+        case "LEAVE":
+          ws.close(1000, "Left by user");
+          break;
+
+        case "SIGNAL_OFFER":
         case "SIGNAL_ANSWER":
           this.forwardTo(msg.targetId, {
-            type: "SIGNAL_ANSWER",
+            type: msg.type,
             senderId: attachment.id,
             sdp: msg.sdp,
           });
@@ -124,7 +116,7 @@ export class ClipboardRoom extends DurableObject {
           break;
       }
     } catch (e) {
-      logger.error("[Room] Error handling message", { error: e });
+      this.logger.error("[Room] Error handling message", { error: e });
     }
   }
 
@@ -136,8 +128,8 @@ export class ClipboardRoom extends DurableObject {
   ) {
     const attachment = ws.deserializeAttachment() as SessionAttachment;
 
-    if (attachment && !attachment.hasLeft) {
-      logger.info(
+    if (attachment) {
+      this.logger.info(
         `[Room] Peer disconnected: ${attachment.id} (code=${code}, reason=${reason}, clean=${wasClean})`,
       );
       this.broadcast(
@@ -163,7 +155,7 @@ export class ClipboardRoom extends DurableObject {
         try {
           ws.send(str);
         } catch (e) {
-          logger.error("[Room] Broadcast send failed", { error: e });
+          this.logger.error("[Room] Broadcast send failed", { error: e });
         }
       }
     }
@@ -179,12 +171,19 @@ export class ClipboardRoom extends DurableObject {
         try {
           ws.send(str);
         } catch (e) {
-          logger.error("[Room] Forward send failed", { error: e });
+          this.logger.error("[Room] Forward send failed", { error: e });
         }
         return;
       }
     }
 
-    logger.warn(`[Room] Target peer not found: ${targetId}`);
+    this.logger.warn(`[Room] Target peer not found: ${targetId}`);
+  }
+
+  private getPeerIds(excludeId: PeerId): PeerId[] {
+    return this.ctx
+      .getWebSockets()
+      .map((ws) => (ws.deserializeAttachment() as SessionAttachment)?.id)
+      .filter((id) => id && id !== excludeId) as PeerId[];
   }
 }

@@ -1,33 +1,24 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 
-import { ClipboardRoom } from "./infrastructure/ClipboardRoom";
+import { Room } from "./do/Room";
 
-export { ClipboardRoom };
+export { Room };
 
-const app = new Hono<{ Bindings: CloudflareBindings }>();
+const app = new Hono<{ Bindings: CloudflareBindings }>()
+  .use("*", logger())
+  .get("/", (c) => c.text("Clipboard Sync Signaling and Relay Server"))
+  .get("/ws", async (c) => {
+    const roomId = c.req.query("roomId");
 
-app.use("*", logger());
+    if (!roomId) {
+      return c.text("Missing roomId", 400);
+    }
 
-app.get("/", (c) => c.text("Clipboard Sync Relay Server Active"));
+    const id = c.env.ROOM.idFromName(roomId);
+    const stub = c.env.ROOM.get(id);
 
-app.get("/ws", async (c) => {
-  const upgradeHeader = c.req.header("Upgrade");
-
-  if (!upgradeHeader || upgradeHeader !== "websocket") {
-    return c.text("Expected Upgrade: websocket", 426);
-  }
-
-  const roomId = c.req.query("roomId");
-
-  if (!roomId) {
-    return c.text("Missing roomId", 400);
-  }
-
-  const id = c.env.CLIPBOARD_ROOM.idFromName(roomId);
-  const stub = c.env.CLIPBOARD_ROOM.get(id);
-
-  return stub.fetch(c.req.raw);
-});
+    return stub.fetch(c.req.raw);
+  });
 
 export default app;
