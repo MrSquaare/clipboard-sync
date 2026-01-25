@@ -10,9 +10,9 @@ export function Dashboard() {
   const { developerMode } = useSettingsStore();
 
   return (
-    <Container size="lg" py="md">
+    <Container py={"md"} size={"lg"}>
       <InformationHeader />
-      <SimpleGrid cols={{ base: 1, md: developerMode ? 2 : 1 }} spacing="lg">
+      <SimpleGrid cols={{ base: 1, md: developerMode ? 2 : 1 }} spacing={"lg"}>
         <ClientsCard />
         {developerMode && <DebugLogCard />}
       </SimpleGrid>

@@ -7,32 +7,32 @@ export function DebugLogCard() {
   const { logs } = useLogStore();
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Card.Section withBorder inheritPadding py="xs">
-        <Group gap="xs">
+    <Card padding={"lg"} radius={"md"} shadow={"sm"} withBorder>
+      <Card.Section inheritPadding py={"xs"} withBorder>
+        <Group gap={"xs"}>
           <IconBug size={20} />
           <Text fw={500}>Debug Log</Text>
         </Group>
       </Card.Section>
 
       <Card.Section>
-        <ScrollArea h={400} type="auto" offsetScrollbars bg="#1e1e1e">
+        <ScrollArea bg={"#1e1e1e"} h={400} offsetScrollbars type={"auto"}>
           <Table
             highlightOnHover
-            verticalSpacing="xs"
             style={{ tableLayout: "fixed" }}
+            verticalSpacing={"xs"}
           >
             <Table.Tbody>
               {logs.map((log) => (
                 <Table.Tr key={log.id}>
                   <Table.Td
-                    w={100}
                     style={{
                       verticalAlign: "top",
                       borderRight: "1px solid var(--mantine-color-dark-6)",
                     }}
+                    w={100}
                   >
-                    <Text size="xs" c="dimmed" ff="monospace">
+                    <Text c={"dimmed"} ff={"monospace"} size={"xs"}>
                       {new Date(log.timestamp).toLocaleTimeString([], {
                         hour12: false,
                         hour: "2-digit",
@@ -43,8 +43,6 @@ export function DebugLogCard() {
                   </Table.Td>
                   <Table.Td>
                     <Text
-                      size="xs"
-                      ff="monospace"
                       c={
                         log.type === "error"
                           ? "red.4"
@@ -52,6 +50,8 @@ export function DebugLogCard() {
                             ? "green.4"
                             : "gray.5"
                       }
+                      ff={"monospace"}
+                      size={"xs"}
                       style={{
                         wordBreak: "break-word",
                         whiteSpace: "pre-wrap",

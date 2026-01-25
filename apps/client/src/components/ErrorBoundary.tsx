@@ -28,24 +28,24 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Container size="sm" py="xl">
-          <Center h="100vh">
+        <Container py={"xl"} size={"sm"}>
+          <Center h={"100vh"}>
             <Alert
-              variant="light"
-              color="red"
-              title="Application Error"
+              color={"red"}
               icon={<IconAlertCircle />}
+              title={"Application Error"}
+              variant={"light"}
             >
-              <Title order={4} mb="md">
+              <Title mb={"md"} order={4}>
                 Something went wrong
               </Title>
-              <Text size="sm" mb="lg">
+              <Text mb={"lg"} size={"sm"}>
                 {this.state.error?.message || "An unexpected error occurred."}
               </Text>
               <Button
-                variant="outline"
-                color="red"
+                color={"red"}
                 onClick={() => window.location.reload()}
+                variant={"outline"}
               >
                 Reload Application
               </Button>

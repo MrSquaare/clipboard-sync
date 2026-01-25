@@ -76,58 +76,56 @@ export function ConnectForm({ onSubmit, loading, error }: ConnectFormProps) {
 
   return (
     <form onSubmit={form.onSubmit(onSubmit)}>
-      <Stack gap="md">
+      <Stack gap={"md"}>
         <TextInput
-          label="Server URL"
           description={
-            <Group justify="space-between" gap={0}>
+            <Group gap={0} justify={"space-between"}>
               <span>WebSocket Server Address</span>
               <Anchor
-                component="button"
-                type="button"
-                size="xs"
+                component={"button"}
                 onClick={handleUseDefaultUrl}
+                size={"xs"}
+                type={"button"}
               >
                 Use Default
               </Anchor>
             </Group>
           }
-          placeholder="wss://..."
+          label={"Server URL"}
           leftSection={<IconServer size={16} />}
+          placeholder={"wss://..."}
           withAsterisk
           {...form.getInputProps("serverUrl")}
         />
 
         <TextInput
-          label="Room ID"
-          placeholder="my-room"
+          label={"Room ID"}
           leftSection={<IconKey size={16} />}
+          placeholder={"my-room"}
           withAsterisk
           {...form.getInputProps("roomId")}
         />
 
         <PasswordInput
-          label="Secret Key"
-          placeholder="Shared secret"
+          label={"Secret Key"}
           leftSection={<IconLock size={16} />}
+          placeholder={"Shared secret"}
           withAsterisk
           {...form.getInputProps("secret")}
         />
 
         <Select
-          label="Transport Mode"
           data={[
             { value: "auto", label: "Auto" },
             { value: "p2p", label: "P2P Only" },
             { value: "relay", label: "Relay Only" },
           ]}
+          label={"Transport Mode"}
           leftSection={<IconNetwork size={16} />}
           {...form.getInputProps("transportMode")}
         />
 
         <Button
-          variant="subtle"
-          onClick={toggleAdvanced}
           leftSection={
             showAdvanced ? (
               <IconChevronDown size={16} />
@@ -135,26 +133,28 @@ export function ConnectForm({ onSubmit, loading, error }: ConnectFormProps) {
               <IconChevronRight size={16} />
             )
           }
-          size="sm"
+          onClick={toggleAdvanced}
+          size={"sm"}
+          variant={"subtle"}
         >
           Advanced Settings
         </Button>
 
         <Collapse in={showAdvanced}>
-          <Paper withBorder p="xs" mt="sm" bg="transparent">
-            <Stack gap="sm">
+          <Paper bg={"transparent"} mt={"sm"} p={"xs"} withBorder>
+            <Stack gap={"sm"}>
               <NumberInput
-                label="Clipboard Polling (ms)"
+                label={"Clipboard Polling (ms)"}
                 min={100}
                 {...form.getInputProps("pollingInterval")}
               />
               <NumberInput
-                label="Ping Interval (ms)"
+                label={"Ping Interval (ms)"}
                 min={5000}
                 {...form.getInputProps("pingInterval")}
               />
               <Switch
-                label="Developer Mode"
+                label={"Developer Mode"}
                 {...form.getInputProps("developerMode", {
                   type: "checkbox",
                 })}
@@ -165,16 +165,16 @@ export function ConnectForm({ onSubmit, loading, error }: ConnectFormProps) {
 
         {error && (
           <Alert
+            color={"red"}
             icon={<IconAlertCircle size={16} />}
-            title="Error"
-            color="red"
-            variant="light"
+            title={"Error"}
+            variant={"light"}
           >
             {error}
           </Alert>
         )}
 
-        <Button type="submit" loading={loading} fullWidth mt="md">
+        <Button fullWidth loading={loading} mt={"md"} type={"submit"}>
           Join Room
         </Button>
       </Stack>

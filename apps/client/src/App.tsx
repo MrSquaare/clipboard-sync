@@ -19,7 +19,7 @@ function AppContent() {
 
 function App() {
   return (
-    <MantineProvider defaultColorScheme="dark" forceColorScheme="dark">
+    <MantineProvider defaultColorScheme={"dark"} forceColorScheme={"dark"}>
       <ErrorBoundary>
         <NetworkProvider>
           <AppContent />

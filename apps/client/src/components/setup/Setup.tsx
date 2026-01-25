@@ -35,12 +35,12 @@ export function Setup() {
   };
 
   return (
-    <Box maw={400} mx="auto" mt="xl">
-      <Paper p="md" shadow="sm" radius="md" withBorder>
-        <Title order={2} ta="center" mb="lg">
+    <Box maw={400} mt={"xl"} mx={"auto"}>
+      <Paper p={"md"} radius={"md"} shadow={"sm"} withBorder>
+        <Title mb={"lg"} order={2} ta={"center"}>
           Connect to Room
         </Title>
-        <ConnectForm onSubmit={handleSubmit} loading={loading} error={error} />
+        <ConnectForm error={error} loading={loading} onSubmit={handleSubmit} />
       </Paper>
     </Box>
   );

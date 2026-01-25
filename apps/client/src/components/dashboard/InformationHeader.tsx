@@ -24,17 +24,17 @@ export function InformationHeader() {
   const networkService = useNetwork();
 
   return (
-    <Paper p="md" shadow="xs" radius="md" withBorder mb="lg">
-      <Group justify="space-between" align="center">
+    <Paper mb={"lg"} p={"md"} radius={"md"} shadow={"xs"} withBorder>
+      <Group align={"center"} justify={"space-between"}>
         <Group>
-          <ThemeIcon size="lg" radius="md" variant="light">
+          <ThemeIcon radius={"md"} size={"lg"} variant={"light"}>
             <IconPlugConnected size={20} />
           </ThemeIcon>
           <div>
             <Title order={3}>Room: {roomId}</Title>
-            <Group gap="xs">
+            <Group gap={"xs"}>
               <IconServer size={14} style={{ opacity: 0.5 }} />
-              <Text size="xs" c="dimmed">
+              <Text c={"dimmed"} size={"xs"}>
                 {serverUrl}
               </Text>
             </Group>
@@ -42,22 +42,22 @@ export function InformationHeader() {
         </Group>
 
         <Group>
-          <Paper px="xs" py={4} withBorder radius="sm" bg="dark.8">
+          <Paper bg={"dark.8"} px={"xs"} py={4} radius={"sm"} withBorder>
             <Group gap={6}>
               <IconUser size={14} style={{ opacity: 0.7 }} />
-              <Text size="sm" fw={500} span>
+              <Text fw={500} size={"sm"} span>
                 ID:
               </Text>
-              <Code bg="transparent" c="dimmed">
+              <Code bg={"transparent"} c={"dimmed"}>
                 {myId?.slice(0, 8)}
               </Code>
             </Group>
           </Paper>
           <Button
-            color="red"
-            variant="light"
+            color={"red"}
             leftSection={<IconLogout size={16} />}
             onClick={() => networkService.disconnect()}
+            variant={"light"}
           >
             Disconnect
           </Button>

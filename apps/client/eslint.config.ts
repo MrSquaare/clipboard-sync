@@ -23,5 +23,9 @@ export default [
         version: "detect",
       },
     },
+    rules: {
+      "react/jsx-curly-brace-presence": ["error", { props: "always" }],
+      "react/jsx-sort-props": ["error"],
+    },
   },
 ];
