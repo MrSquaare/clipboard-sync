@@ -47,6 +47,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
