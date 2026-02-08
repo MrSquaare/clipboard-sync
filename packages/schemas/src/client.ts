@@ -77,6 +77,7 @@ export type ClientLeaveMessage = z.infer<typeof ClientLeaveMessageSchema>;
 
 export const ClientRelayBroadcastMessageSchema = z.object({
   type: z.literal("RELAY_BROADCAST"),
+  targetIds: z.array(ClientIdSchema).optional(),
   payload: ClientEncryptedPayloadSchema,
 });
 
