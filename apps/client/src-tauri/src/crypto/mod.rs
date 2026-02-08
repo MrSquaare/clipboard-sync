@@ -23,6 +23,7 @@ pub enum EncryptionError {
 pub fn generate_salt() -> Vec<u8> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
+
     salt.to_vec()
 }
 
@@ -31,6 +32,7 @@ pub fn derive_key(secret: &str, salt: &[u8]) -> Result<Key<Aes256Gcm>, Encryptio
     Argon2::default()
         .hash_password_into(secret.as_bytes(), salt, &mut key)
         .map_err(|e| EncryptionError::KeyDerivation(e.to_string()))?;
+
     Ok(*Key::<Aes256Gcm>::from_slice(&key))
 }
 
@@ -41,11 +43,9 @@ pub fn encrypt(
 ) -> Result<(Vec<u8>, Vec<u8>), EncryptionError> {
     let key = derive_key(secret, salt)?;
     let cipher = Aes256Gcm::new(&key);
-
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
-
     let ciphertext = cipher
         .encrypt(nonce, plaintext)
         .map_err(|e| EncryptionError::Encryption(e.to_string()))?;

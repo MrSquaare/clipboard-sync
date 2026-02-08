@@ -36,7 +36,6 @@ pub fn encrypt_message(
 ) -> Result<EncryptedPayload, String> {
     let secret = state.get_secret().map_err(|e| e.to_string())?;
     let salt = generate_salt();
-
     let (ciphertext, iv) =
         encrypt(&secret, &salt, plaintext.as_bytes()).map_err(|e| e.to_string())?;
 
@@ -53,7 +52,6 @@ pub fn decrypt_message(
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     let secret = state.get_secret().map_err(|e| e.to_string())?;
-
     let salt = STANDARD
         .decode(&payload.salt)
         .map_err(|e| CryptoCommandError::Base64Decode(e.to_string()).to_string())?;
@@ -63,7 +61,6 @@ pub fn decrypt_message(
     let ciphertext = STANDARD
         .decode(&payload.ciphertext)
         .map_err(|e| CryptoCommandError::Base64Decode(e.to_string()).to_string())?;
-
     let plaintext = decrypt(&secret, &salt, &ciphertext, &iv).map_err(|e| e.to_string())?;
 
     String::from_utf8(plaintext).map_err(|_| CryptoCommandError::Utf8.to_string())

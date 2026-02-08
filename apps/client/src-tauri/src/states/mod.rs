@@ -31,11 +31,13 @@ impl AppState {
 
     pub fn set_secret(&self, value: String) -> Result<(), AppStateError> {
         *self.secret.lock().map_err(|_| AppStateError::LockFailed)? = Some(value);
+
         Ok(())
     }
 
     pub fn clear_secret(&self) -> Result<(), AppStateError> {
         *self.secret.lock().map_err(|_| AppStateError::LockFailed)? = None;
+
         Ok(())
     }
 }

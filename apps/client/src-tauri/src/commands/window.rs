@@ -9,6 +9,7 @@ pub async fn show_window(app: AppHandle) -> Result<(), String> {
     window.unminimize().map_err(|e| e.to_string())?;
     window.show().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
@@ -20,6 +21,7 @@ pub async fn minimize_window(app: AppHandle) -> Result<(), String> {
 
     window.minimize().map_err(|e| e.to_string())?;
     window.hide().map_err(|e| e.to_string())?;
+
     Ok(())
 }
 

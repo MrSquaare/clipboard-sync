@@ -34,9 +34,11 @@ pub fn unset_secret(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub fn save_secret(secret: String) -> Result<(), String> {
     let entry = Entry::new(SERVICE_NAME, USERNAME).map_err(SecretCommandError::from)?;
+
     entry
         .set_password(&secret)
         .map_err(SecretCommandError::from)?;
+
     Ok(())
 }
 
@@ -44,14 +46,17 @@ pub fn save_secret(secret: String) -> Result<(), String> {
 pub fn load_secret() -> Result<String, String> {
     let entry = Entry::new(SERVICE_NAME, USERNAME).map_err(SecretCommandError::from)?;
     let password = entry.get_password().map_err(SecretCommandError::from)?;
+
     Ok(password)
 }
 
 #[tauri::command]
 pub fn clear_secret() -> Result<(), String> {
     let entry = Entry::new(SERVICE_NAME, USERNAME).map_err(SecretCommandError::from)?;
+
     entry
         .delete_credential()
         .map_err(SecretCommandError::from)?;
+
     Ok(())
 }
