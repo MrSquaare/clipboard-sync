@@ -1,6 +1,9 @@
 import { useCallback } from "react";
 
-import { getErrorMessage } from "../errors/helpers";
+import {
+  getErrorMessage,
+  isSecureStorageMissingEntryError,
+} from "../errors/helpers";
 import { clientsService } from "../services/clients";
 import { clipboardSyncService } from "../services/clipboard-sync";
 import { connectionService } from "../services/connection";
@@ -53,8 +56,11 @@ export const useConnection = () => {
       await secretService.unsetSecret();
       await secretService.clearSecret();
     } catch (error) {
+      if (!isSecureStorageMissingEntryError(error)) {
+        setError(getErrorMessage(error));
+      }
+    } finally {
       setStatus("disconnected");
-      setError(getErrorMessage(error));
     }
   }, [setStatus, setError]);
 
