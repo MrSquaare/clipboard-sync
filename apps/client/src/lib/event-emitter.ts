@@ -30,15 +30,15 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]>> {
     event: TEvent,
     ...args: TEventMap[TEvent]
   ): void {
-    try {
-      this.eventHandlers.get(event)?.forEach((handler) => {
+    this.eventHandlers.get(event)?.forEach((handler) => {
+      try {
         handler(...args);
-      });
-    } catch (error) {
-      console.error(
-        `Event handler failed for "${String(event)}": ${getErrorMessage(error)}`,
-      );
-    }
+      } catch (error) {
+        console.error(
+          `Event handler failed for "${String(event)}": ${getErrorMessage(error)}`,
+        );
+      }
+    });
   }
 
   clear(event: keyof TEventMap): void {
