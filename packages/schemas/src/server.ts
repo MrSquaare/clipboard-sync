@@ -7,7 +7,7 @@ import {
 } from "./client";
 
 export const ServerRoomIDSchema = z.preprocess(
-  (val) => String(val).trim(),
+  (val) => (typeof val === "string" ? val.trim() : val),
   z
     .string()
     .min(6, "Room ID must be at least 6 characters")

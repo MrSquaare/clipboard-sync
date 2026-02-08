@@ -5,7 +5,7 @@ export const ClientIdSchema = z.uuidv4("Client ID must be a valid UUIDv4");
 export type ClientId = z.infer<typeof ClientIdSchema>;
 
 export const ClientNameSchema = z.preprocess(
-  (val) => String(val).trim(),
+  (val) => (typeof val === "string" ? val.trim() : val),
   z
     .string()
     .min(1, "Client name is required")
