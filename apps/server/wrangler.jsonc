@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "clipboard-sync-server",
-  "compatibility_date": "2026-01-20",
+  "compatibility_date": "2026-02-03",
   "main": "./src/index.ts",
   "durable_objects": {
     "bindings": [

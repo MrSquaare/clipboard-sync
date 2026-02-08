@@ -1,281 +1,305 @@
-import type { PeerId } from "@clipboard-sync/schemas";
+import type { ClientId } from "@clipboard-sync/schemas";
 
-import type { EncryptedMessage } from "./crypto";
-import type { SignalingService } from "./signaling";
-import type { Transport, TransportEvents } from "./transport";
+import {
+  WEBRTC_DATA_CHANNEL_NAME,
+  WEBRTC_MAX_RESTART_ATTEMPTS,
+  WEBRTC_RESTART_BASE_DELAY_MS,
+  WEBRTC_RESTART_MAX_DELAY_MS,
+  WEBRTC_STUN_SERVER,
+} from "../constants";
+import { EventEmitter } from "../lib/event-emitter";
+import { PeerClient, type PeerSignal } from "../lib/peer-client";
+import { MessageSchema, type Message } from "../schemas/message";
+import type { PeerMessage } from "../schemas/peer";
+import { useSettingsStore } from "../stores/settings";
 
-export interface P2PEvents extends TransportEvents {
-  onPeerConnected: (peerId: PeerId) => void;
-  onPeerDisconnected: (peerId: PeerId) => void;
-}
+import { Logger } from "./logger";
+import { relayTransport, type RelayTransport } from "./relay-transport";
 
-/**
- * Manages WebRTC connections for multiple peers.
- * Uses SignalingService for the handshake.
- */
-export class P2PTransport implements Transport {
-  private signaling: SignalingService;
-  private listener: P2PEvents | null = null;
-  private peers: Map<PeerId, PeerConnectionWrapper> = new Map();
+const logger = new Logger("P2P");
 
-  private rtcConfig: RTCConfiguration = {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:global.stun.twilio.com:3478" },
-    ],
-  };
+type P2PEventMap = {
+  connected: [clientId: ClientId];
+  disconnected: [clientId: ClientId];
+  message: [senderId: ClientId, message: Message];
+};
 
-  constructor(signaling: SignalingService) {
-    this.signaling = signaling;
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: [{ urls: WEBRTC_STUN_SERVER }],
+};
+
+export class P2PTransport {
+  private readonly relay: RelayTransport;
+  private readonly peers = new Map<ClientId, PeerClient>();
+  private readonly events = new EventEmitter<P2PEventMap>();
+
+  on = this.events.on.bind(this.events);
+
+  constructor(relay: RelayTransport) {
+    this.relay = relay;
+
+    this.setupEventHandlers();
   }
 
-  public setListener(listener: P2PEvents): void {
-    this.listener = listener;
-  }
-
-  public async connect(targetId?: PeerId): Promise<void> {
-    if (!targetId) {
-      throw new Error("P2P connect requires a target peer ID");
-    }
-    this.getOrCreatePeer(targetId, true);
-  }
-
-  public disconnect(): void {
-    this.peers.forEach((peer) => peer.destroy());
-    this.peers.clear();
-  }
-
-  public async send(
-    payload: EncryptedMessage,
-    targetId?: PeerId,
-  ): Promise<void> {
-    if (targetId) {
-      const peer = this.peers.get(targetId);
-      if (peer && peer.isConnected()) {
-        peer.send(payload);
+  private setupEventHandlers(): void {
+    this.relay.on("message", async (senderId, message) => {
+      if (
+        message.type !== "PEER_OFFER" &&
+        message.type !== "PEER_ANSWER" &&
+        message.type !== "PEER_ICE"
+      ) {
+        return;
       }
-    } else {
-      this.peers.forEach((peer) => {
-        if (peer.isConnected()) {
-          peer.send(payload);
-        }
-      });
-    }
+
+      await this.handleRelayPeerSignal(senderId, message);
+    });
   }
 
-  // --- Signaling Hooks ---
+  async initiate(clientId: ClientId): Promise<void> {
+    const existing = this.peers.get(clientId);
 
-  // Called by Manager when a signal arrives
-  public async handleSignal(
-    peerId: PeerId,
-    type: "offer" | "answer" | "ice",
-    data: unknown,
-  ) {
-    const peer = this.getOrCreatePeer(peerId, false);
-
-    try {
-      if (type === "offer") {
-        await peer.handleOffer(data as RTCSessionDescriptionInit);
-      } else if (type === "answer") {
-        await peer.handleAnswer(data as RTCSessionDescriptionInit);
-      } else if (type === "ice") {
-        await peer.handleCandidate(data as RTCIceCandidateInit);
-      }
-    } catch (error) {
-      console.error(`[P2P] Error handling signal from ${peerId}`, error);
-    }
-  }
-
-  // --- Internal ---
-
-  private getOrCreatePeer(
-    peerId: PeerId,
-    initiator: boolean,
-  ): PeerConnectionWrapper {
-    let peer = this.peers.get(peerId);
-    if (!peer) {
-      peer = new PeerConnectionWrapper(
-        peerId,
-        this.rtcConfig,
-        this.signaling,
-        {
-          onMessage: (msg) => this.listener?.onMessage(msg, peerId),
-          onStatusChange: (status) => {
-            if (status === "connected") {
-              this.listener?.onPeerConnected(peerId);
-            } else if (status === "disconnected" || status === "failed") {
-              this.listener?.onPeerDisconnected(peerId);
-              if (status === "failed") {
-                this.peers.delete(peerId);
-                peer?.destroy();
-              }
-            }
-          },
-        },
-        initiator,
-      );
-      this.peers.set(peerId, peer);
-    }
-    return peer;
-  }
-}
-
-/**
- * Encapsulates a single peer connection state and logic.
- */
-class PeerConnectionWrapper {
-  private pc: RTCPeerConnection;
-  private dc: RTCDataChannel | null = null;
-  private peerId: PeerId;
-  private signaling: SignalingService;
-  private callbacks: {
-    onMessage: (msg: EncryptedMessage) => void;
-    onStatusChange: (status: RTCPeerConnectionState) => void;
-  };
-  private isPolite: boolean;
-  private makingOffer = false;
-  private ignoreOffer = false;
-  private isSettingRemoteAnswerPending = false;
-
-  constructor(
-    peerId: PeerId,
-    config: RTCConfiguration,
-    signaling: SignalingService,
-    callbacks: {
-      onMessage: (msg: EncryptedMessage) => void;
-      onStatusChange: (status: RTCPeerConnectionState) => void;
-    },
-    initiator: boolean,
-  ) {
-    this.peerId = peerId;
-    this.signaling = signaling;
-    this.callbacks = callbacks;
-    this.pc = new RTCPeerConnection(config);
-    this.isPolite = !initiator;
-
-    this.setupPC();
-
-    if (initiator) {
-      this.dc = this.pc.createDataChannel("clipboard-sync", {
-        ordered: true,
-      });
-      this.setupDataChannel(this.dc);
-      this.makingOffer = true;
-      this.pc.onnegotiationneeded = this.onNegotiationNeeded.bind(this);
-    } else {
-      this.pc.ondatachannel = (ev) => {
-        this.dc = ev.channel;
-        this.setupDataChannel(this.dc);
-      };
-    }
-  }
-
-  public destroy() {
-    this.pc.close();
-    if (this.dc) this.dc.close();
-  }
-
-  public isConnected(): boolean {
-    return (
-      this.pc.connectionState === "connected" && this.dc?.readyState === "open"
-    );
-  }
-
-  public send(payload: EncryptedMessage) {
-    if (this.dc && this.dc.readyState === "open") {
-      this.dc.send(JSON.stringify(payload));
-    }
-  }
-
-  public async handleOffer(sdp: RTCSessionDescriptionInit) {
-    const offerCollision =
-      this.makingOffer ||
-      this.pc.signalingState !== "stable" ||
-      this.isSettingRemoteAnswerPending;
-
-    this.ignoreOffer = !this.isPolite && offerCollision;
-
-    if (this.ignoreOffer) {
+    if (existing?.status === "connected") {
+      logger.debug(`Already connected to ${clientId}, ignoring initiate call`);
       return;
     }
 
-    if (offerCollision) {
-      await Promise.all([
-        this.pc.setLocalDescription({ type: "rollback" }),
-        this.pc.setRemoteDescription(sdp),
-      ]);
-    } else {
-      await this.pc.setRemoteDescription(sdp);
-    }
+    logger.info(`Initiating connection with ${clientId}`);
 
-    await this.pc.setLocalDescription(await this.pc.createAnswer());
-    this.signaling.sendSignal(this.peerId, "answer", this.pc.localDescription!);
+    this.ensurePeer(clientId, true);
   }
 
-  public async handleAnswer(sdp: RTCSessionDescriptionInit) {
-    this.isSettingRemoteAnswerPending = true;
-    try {
-      await this.pc.setRemoteDescription(sdp);
-    } catch (e) {
-      console.error("Failed to set remote answer", e);
-    } finally {
-      this.isSettingRemoteAnswerPending = false;
+  async initiateAll(clientIds: ClientId[]): Promise<void> {
+    await Promise.all(clientIds.map((id) => this.initiate(id)));
+  }
+
+  disconnect(clientId: ClientId): void {
+    const peer = this.peers.get(clientId);
+
+    if (!peer) {
+      return;
+    }
+
+    logger.debug(`Disconnecting from ${clientId}`);
+
+    peer.close();
+    this.peers.delete(clientId);
+  }
+
+  disconnectAll(): void {
+    for (const clientId of this.peers.keys()) {
+      this.disconnect(clientId);
     }
   }
 
-  public async handleCandidate(candidate: RTCIceCandidateInit) {
-    try {
-      await this.pc.addIceCandidate(candidate);
-    } catch (e) {
-      if (!this.ignoreOffer) {
-        console.error("Error adding ICE candidate", e);
+  broadcast(message: Message): ClientId[] {
+    logger.debug(`Broadcasting ${message.type}`);
+
+    const sent: ClientId[] = [];
+
+    for (const clientId of this.peers.keys()) {
+      if (this.sendTo(clientId, message)) {
+        sent.push(clientId);
       }
     }
+
+    return sent;
   }
 
-  private setupPC() {
-    this.pc.onicecandidate = ({ candidate }) => {
-      if (candidate) {
-        this.signaling.sendSignal(this.peerId, "ice", candidate);
-      }
-    };
+  sendTo(clientId: ClientId, message: Message): boolean {
+    const peer = this.peers.get(clientId);
 
-    this.pc.onconnectionstatechange = () => {
-      this.callbacks.onStatusChange(this.pc.connectionState);
-    };
+    if (peer?.status !== "connected") {
+      logger.warn(`Cannot send message to ${clientId}: not connected`);
+      return false;
+    }
 
-    this.pc.onnegotiationneeded = () => {
-      this.onNegotiationNeeded();
-    };
-  }
-
-  private async onNegotiationNeeded() {
     try {
-      this.makingOffer = true;
-      await this.pc.setLocalDescription(await this.pc.createOffer());
-      this.signaling.sendSignal(
-        this.peerId,
-        "offer",
-        this.pc.localDescription!,
+      logger.debug(`Sending ${message.type} to ${clientId}`);
+
+      peer.send(JSON.stringify(message));
+
+      return true;
+    } catch (error) {
+      logger.error(`Failed to send message to ${clientId}`, error);
+
+      return false;
+    }
+  }
+
+  private ensurePeer(clientId: ClientId, initiator: boolean): PeerClient {
+    const existing = this.peers.get(clientId);
+
+    if (existing) {
+      return existing;
+    }
+
+    const peer = this.createPeer(clientId, initiator);
+
+    this.peers.set(clientId, peer);
+
+    return peer;
+  }
+
+  private createPeer(clientId: ClientId, initiator: boolean): PeerClient {
+    const peer = new PeerClient({
+      initiator,
+      rtcConfig: RTC_CONFIG,
+      channelLabel: WEBRTC_DATA_CHANNEL_NAME,
+      ordered: true,
+      maxRetries: WEBRTC_MAX_RESTART_ATTEMPTS,
+      baseBackoffMs: WEBRTC_RESTART_BASE_DELAY_MS,
+      maxBackoffMs: WEBRTC_RESTART_MAX_DELAY_MS,
+    });
+
+    peer.on("connected", () => {
+      logger.info(`Peer ${clientId} connected`);
+
+      this.events.emit("connected", clientId);
+    });
+
+    peer.on("reconnecting", (delay, attempt) => {
+      logger.info(
+        `Peer ${clientId} reconnecting in ${delay}ms (attempt ${attempt})`,
       );
-    } catch (err) {
-      console.error(`[P2P] Negotiation error with ${this.peerId}`, err);
-    } finally {
-      this.makingOffer = false;
+    });
+
+    peer.on("disconnected", (reason) => {
+      logger.debug(
+        `Peer ${clientId} disconnected (reason: ${reason ?? "unknown"})`,
+      );
+
+      this.events.emit("disconnected", clientId);
+    });
+
+    peer.on("closed", () => {
+      logger.info(`Peer ${clientId} closed`);
+
+      this.peers.delete(clientId);
+      this.events.emit("disconnected", clientId);
+    });
+
+    peer.on("signal", (signal) => {
+      this.handlePeerSignal(clientId, signal);
+    });
+
+    peer.on("message", (message) => {
+      this.handlePeerMessage(clientId, message);
+    });
+
+    peer.on("error", (error) => {
+      logger.error(`Peer ${clientId} error`, error);
+    });
+
+    peer.connect();
+
+    return peer;
+  }
+
+  private async handleRelayPeerSignal(
+    senderId: ClientId,
+    message: PeerMessage,
+  ): Promise<void> {
+    if (this.settingsStore.transportMode === "relay") {
+      logger.debug(
+        `Received peer signal ${message.type} from ${senderId} while in relay-only mode, ignoring`,
+      );
+      return;
+    }
+
+    const signal = this.fromPeerMessage(message);
+
+    if (!signal) {
+      return;
+    }
+
+    const peer = this.ensurePeer(senderId, false);
+
+    try {
+      await peer.signal(signal);
+    } catch (error) {
+      logger.error(
+        `Failed to handle signal ${message.type} from ${senderId}`,
+        error,
+      );
     }
   }
 
-  private setupDataChannel(dc: RTCDataChannel) {
-    dc.onopen = () => {
-      // Ready
-    };
-    dc.onmessage = (ev) => {
-      try {
-        const payload = JSON.parse(ev.data);
-        this.callbacks.onMessage(payload);
-      } catch (e) {
-        console.error("P2P Message parse error", e);
+  private async handlePeerSignal(
+    clientId: ClientId,
+    signal: PeerSignal,
+  ): Promise<void> {
+    const message = this.toPeerMessage(signal);
+
+    if (!message) {
+      return;
+    }
+
+    try {
+      await this.relay.sendTo(clientId, message);
+    } catch (error) {
+      logger.error(
+        `Failed to send signal ${signal.type} to ${clientId}`,
+        error,
+      );
+    }
+  }
+
+  private handlePeerMessage(clientId: ClientId, message: string): void {
+    try {
+      const parsed = JSON.parse(message) as unknown;
+      const result = MessageSchema.safeParse(parsed);
+
+      if (!result.success) {
+        logger.warn(
+          `Invalid message from ${clientId}: ${result.error.message}`,
+        );
+        return;
       }
-    };
+
+      const msg = result.data;
+
+      logger.debug(`Received message ${msg.type} from ${clientId}`);
+
+      this.events.emit("message", clientId, msg);
+    } catch (error) {
+      logger.error(`Failed to parse message from ${clientId}`, error);
+    }
+  }
+
+  private fromPeerMessage(message: PeerMessage): PeerSignal | null {
+    switch (message.type) {
+      case "PEER_OFFER":
+        return { type: "offer", sdp: message.sdp };
+      case "PEER_ANSWER":
+        return { type: "answer", sdp: message.sdp };
+      case "PEER_ICE":
+        return { type: "candidate", candidate: message.candidate };
+      default:
+        return null;
+    }
+  }
+
+  private toPeerMessage(signal: PeerSignal): PeerMessage | null {
+    switch (signal.type) {
+      case "offer":
+      case "answer":
+        return {
+          type: signal.type === "offer" ? "PEER_OFFER" : "PEER_ANSWER",
+          sdp: signal.sdp,
+        };
+      case "candidate":
+        return {
+          type: "PEER_ICE",
+          candidate: signal.candidate,
+        };
+      default:
+        return null;
+    }
+  }
+
+  private get settingsStore() {
+    return useSettingsStore.getState();
   }
 }
+
+export const p2pTransport = new P2PTransport(relayTransport);
