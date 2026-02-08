@@ -1,7 +1,6 @@
 export class AppError extends Error {
   constructor(message: string, cause?: unknown) {
-    super(message);
+    super(message, { cause });
     this.name = "AppError";
-    this.cause = cause;
   }
 }
