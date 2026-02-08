@@ -10,7 +10,7 @@ export class WindowService {
     try {
       await invoke("show_window");
     } catch (error) {
-      logger.error("Failed to show window:", error);
+      logger.error("Failed to show window", error);
     }
   }
 
@@ -18,7 +18,7 @@ export class WindowService {
     try {
       await invoke("minimize_window");
     } catch (error) {
-      logger.error("Failed to minimize window:", error);
+      logger.error("Failed to minimize window", error);
     }
   }
 
@@ -26,7 +26,7 @@ export class WindowService {
     try {
       await invoke("quit_app");
     } catch (error) {
-      logger.error("Failed to quit app:", error);
+      logger.error("Failed to quit app", error);
     }
   }
 
@@ -38,7 +38,7 @@ export class WindowService {
       try {
         await handler();
       } catch (error) {
-        logger.error("Error in close request handler:", error);
+        logger.error("Error in close request handler", error);
       }
     })
       .then((unlistenFn) => {
@@ -49,7 +49,7 @@ export class WindowService {
         }
       })
       .catch((error) => {
-        logger.error("Failed to setup close request listener:", error);
+        logger.error("Failed to setup close request listener", error);
       });
 
     return () => {
