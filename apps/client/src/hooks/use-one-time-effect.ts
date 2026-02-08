@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 export const useOneTimeEffect = (effect: () => void | (() => void)): void => {
+  const effectRef = useRef(effect);
   const hasRunRef = useRef(false);
 
   useEffect(() => {
@@ -8,8 +9,6 @@ export const useOneTimeEffect = (effect: () => void | (() => void)): void => {
 
     hasRunRef.current = true;
 
-    const cleanup = effect();
-
-    return cleanup;
-  }, [effect]);
+    return effectRef.current();
+  }, []);
 };
