@@ -110,6 +110,9 @@ export class ConnectionService {
   disconnect(): void {
     logger.info("Disconnecting from server");
 
+    this.connectionStore.setStatus("disconnecting");
+    this.connectionStore.setError(null);
+
     this.ws.send({ type: "LEAVE" });
     this.ws.disconnect();
     this.stopPing();

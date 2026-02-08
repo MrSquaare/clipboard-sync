@@ -1,10 +1,12 @@
 import { useCallback } from "react";
 
+import { getErrorMessage } from "../errors/helpers";
 import { clientsService } from "../services/clients";
 import { clipboardSyncService } from "../services/clipboard-sync";
 import { connectionService } from "../services/connection";
 import { secretService } from "../services/secret";
 import { transportService } from "../services/transport";
+import { useConnectionStore } from "../stores/connection";
 
 export type ConnectWithSavedOptions = {
   saveSecret: boolean;
@@ -16,24 +18,45 @@ export type ConnectOptions = {
 };
 
 export const useConnection = () => {
-  const connect = useCallback(async (options: ConnectOptions) => {
-    await secretService.setSecret(options.secret);
+  const { setStatus, setError } = useConnectionStore();
 
-    if (options.saveSecret) {
-      await secretService.saveSecret(options.secret);
-    }
+  const connect = useCallback(
+    async (options: ConnectOptions) => {
+      setStatus("connecting");
+      setError(null);
 
-    connectionService.connect();
-  }, []);
+      try {
+        await secretService.setSecret(options.secret);
+
+        if (options.saveSecret) {
+          await secretService.saveSecret(options.secret);
+        }
+
+        connectionService.connect();
+      } catch (error) {
+        setStatus("disconnected");
+        setError(getErrorMessage(error));
+      }
+    },
+    [setStatus, setError],
+  );
 
   const disconnect = useCallback(async () => {
-    connectionService.disconnect();
-    transportService.disconnectAll();
-    clientsService.reset();
-    clipboardSyncService.reset();
-    await secretService.unsetSecret();
-    await secretService.clearSecret();
-  }, []);
+    setStatus("disconnecting");
+    setError(null);
+
+    try {
+      connectionService.disconnect();
+      transportService.disconnectAll();
+      clientsService.reset();
+      clipboardSyncService.reset();
+      await secretService.unsetSecret();
+      await secretService.clearSecret();
+    } catch (error) {
+      setStatus("disconnected");
+      setError(getErrorMessage(error));
+    }
+  }, [setStatus, setError]);
 
   return { connect, disconnect };
 };
