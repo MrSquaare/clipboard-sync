@@ -122,7 +122,7 @@ export class Room extends DurableObject<CloudflareBindings> {
           this.handleLeave(session);
           break;
         case "RELAY_BROADCAST":
-          this.handleRelayBroadcast(session, msg.payload);
+          this.handleRelayBroadcast(session, msg.targetIds, msg.payload);
           break;
         case "RELAY_SEND":
           this.handleRelaySend(session, msg.targetId, msg.payload);
@@ -155,10 +155,14 @@ export class Room extends DurableObject<CloudflareBindings> {
       wasClean,
     });
 
-    this.broadcast(
-      { type: "CLIENT_LEFT", payload: this.buildClientInfo(session) },
-      session,
-    );
+    const otherClientSessions = this.getClientSessions({
+      exclude: [session.attachment.id],
+    });
+
+    this.broadcast(otherClientSessions, {
+      type: "CLIENT_LEFT",
+      payload: this.buildClientInfo(session),
+    });
   }
 
   async webSocketError(ws: WebSocket, error: unknown) {
@@ -173,13 +177,16 @@ export class Room extends DurableObject<CloudflareBindings> {
 
     ws.serializeAttachment(attachment);
 
-    const clientInfos = this.getClientInfos(attachment.id);
+    const otherClientSessions = this.getClientSessions({
+      exclude: [session.attachment.id],
+    });
+    const otherClientInfos = this.buildClientInfos(otherClientSessions);
 
     this.send(session, {
       type: "WELCOME",
       payload: {
         clientId: attachment.id,
-        clients: clientInfos,
+        clients: otherClientInfos,
       },
     });
 
@@ -187,7 +194,10 @@ export class Room extends DurableObject<CloudflareBindings> {
 
     this.logger.info("Client joined", clientInfo);
 
-    this.broadcast({ type: "CLIENT_JOINED", payload: clientInfo }, session);
+    this.broadcast(otherClientSessions, {
+      type: "CLIENT_JOINED",
+      payload: clientInfo,
+    });
   }
 
   private handleHeartbeat(session: ClientSession) {
@@ -204,16 +214,19 @@ export class Room extends DurableObject<CloudflareBindings> {
 
   private handleRelayBroadcast(
     session: ClientSession,
+    targetIds: ClientId[] | undefined,
     payload: ClientEncryptedPayload,
   ) {
-    this.broadcast(
-      {
-        type: "RELAY_BROADCAST",
-        senderId: session.attachment.id,
-        payload,
-      },
-      session,
-    );
+    const targetSessions = this.getClientSessions({
+      exclude: [session.attachment.id],
+      include: targetIds,
+    });
+
+    this.broadcast(targetSessions, {
+      type: "RELAY_BROADCAST",
+      senderId: session.attachment.id,
+      payload: payload,
+    });
   }
 
   private handleRelaySend(
@@ -221,14 +234,25 @@ export class Room extends DurableObject<CloudflareBindings> {
     targetId: ClientId,
     payload: ClientEncryptedPayload,
   ) {
-    const sent = this.sendTo(targetId, {
-      type: "RELAY_SEND",
-      senderId: session.attachment.id,
-      payload,
-    });
+    const targetSession = this.getClientSession(targetId);
 
-    if (!sent) {
-      this.sendError(session, `Client ${targetId} not found`);
+    if (!targetSession) {
+      this.logger.error("Target client not found", { targetId });
+      this.sendError(session, "Target client not found");
+      return;
+    }
+
+    try {
+      this.send(targetSession, {
+        type: "RELAY_SEND",
+        senderId: targetSession.attachment.id,
+        payload: payload,
+      });
+    } catch (error) {
+      this.logger.error("Send to target client failed", {
+        targetId: targetSession.attachment.id,
+        error,
+      });
     }
   }
 
@@ -240,54 +264,34 @@ export class Room extends DurableObject<CloudflareBindings> {
     return { id, name: clientName };
   }
 
-  private send(session: ClientUnknownSession, message: ServerMessage) {
+  private send(target: ClientUnknownSession, message: ServerMessage) {
     this.logger.debug("Sending message", {
-      targetId: session.attachment?.id,
+      targetId: target.attachment?.id,
       message: this.getLogServerMessage(message),
     });
 
-    session.ws.send(JSON.stringify(message));
+    target.ws.send(JSON.stringify(message));
   }
 
-  private sendError(session: ClientUnknownSession, message: string) {
-    this.send(session, { type: "ERROR", payload: { message } });
+  private sendError(target: ClientUnknownSession, message: string) {
+    this.send(target, { type: "ERROR", payload: { message } });
   }
 
-  private broadcast(message: ServerMessage, exclude?: ClientSession) {
+  private broadcast(targets: ClientSession[], message: ServerMessage) {
     this.logger.debug("Broadcasting message", {
-      excludeClientId: exclude?.attachment.id,
+      targetIds: targets.map((session) => session.attachment.id),
       message: this.getLogServerMessage(message),
     });
 
-    for (const clientSession of this.getClientSessions(exclude)) {
+    for (const target of targets) {
       try {
-        this.send(clientSession, message);
+        this.send(target, message);
       } catch (error) {
         this.logger.error("Broadcast failed", {
-          targetId: clientSession.attachment.id,
+          targetId: target.attachment.id,
           error,
         });
       }
-    }
-  }
-
-  private sendTo(targetId: ClientId, message: ServerMessage) {
-    const targetSession = this.getClientSession(targetId);
-
-    if (!targetSession) {
-      this.logger.warn("Target client not found", { targetId });
-      return false;
-    }
-
-    try {
-      this.send(targetSession, message);
-      return true;
-    } catch (error) {
-      this.logger.error("Send to target client failed", {
-        targetId: targetSession.attachment.id,
-        error,
-      });
-      return false;
     }
   }
 
@@ -315,17 +319,23 @@ export class Room extends DurableObject<CloudflareBindings> {
     return null;
   }
 
-  private getClientSessions(exclude?: ClientSession): ClientSession[] {
+  private getClientSessions({
+    include,
+    exclude,
+  }: {
+    include?: ClientId[];
+    exclude?: ClientId[];
+  }): ClientSession[] {
     const clientSessions: ClientSession[] = [];
 
     for (const ws of this.ctx.getWebSockets()) {
-      if (ws === exclude?.ws) continue;
-
       const attachment = this.getClientSessionAttachment(ws);
 
-      if (attachment) {
-        clientSessions.push({ ws, attachment });
-      }
+      if (!attachment) continue;
+      if (include && !include.includes(attachment.id)) continue;
+      if (exclude && exclude.includes(attachment.id)) continue;
+
+      clientSessions.push({ ws, attachment });
     }
 
     return clientSessions;
@@ -335,10 +345,8 @@ export class Room extends DurableObject<CloudflareBindings> {
     return { id: session.attachment.id, name: session.attachment.name };
   }
 
-  private getClientInfos(excludeId: ClientId): ClientInfo[] {
-    return this.getClientSessions()
-      .filter((session) => session.attachment.id !== excludeId)
-      .map((session) => this.buildClientInfo(session));
+  private buildClientInfos(sessions: ClientSession[]): ClientInfo[] {
+    return sessions.map((session) => this.buildClientInfo(session));
   }
 
   private getLogClientMessage(message: ClientMessage) {
