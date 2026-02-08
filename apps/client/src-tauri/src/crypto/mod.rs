@@ -16,6 +16,8 @@ pub enum EncryptionError {
     Encryption(String),
     #[error("decryption failed: {0}")]
     Decryption(String),
+    #[error("invalid nonce length: expected 12 bytes, got {0}")]
+    InvalidNonce(usize),
 }
 
 pub fn generate_salt() -> Vec<u8> {
@@ -57,6 +59,10 @@ pub fn decrypt(
     ciphertext: &[u8],
     nonce: &[u8],
 ) -> Result<Vec<u8>, EncryptionError> {
+    if nonce.len() != 12 {
+        return Err(EncryptionError::InvalidNonce(nonce.len()));
+    }
+
     let key = derive_key(secret, salt)?;
     let cipher = Aes256Gcm::new(&key);
     let nonce = Nonce::from_slice(nonce);
