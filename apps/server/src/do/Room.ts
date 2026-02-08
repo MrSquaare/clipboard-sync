@@ -178,7 +178,7 @@ export class Room extends DurableObject<CloudflareBindings> {
       session.attachment ?? this.buildClientSessionAttachment(payload);
     const newSession: ClientSession = { ws: session.ws, attachment };
 
-    newSession.ws.serializeAttachment(session.attachment);
+    newSession.ws.serializeAttachment(attachment);
 
     const otherClientSessions = this.getClientSessions({
       exclude: [newSession.attachment.id],
