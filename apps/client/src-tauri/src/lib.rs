@@ -1,79 +1,119 @@
-use base64::{engine::general_purpose, Engine as _};
-use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{
+    image::Image,
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager,
+};
+use tauri_plugin_log::{Target, TargetKind};
 
+mod commands;
 mod crypto;
-use crypto::{CryptoManager, CryptoState};
+mod platform;
+mod states;
 
-#[derive(Serialize, Deserialize)]
-struct EncryptedMessage {
-    iv: String,
-    ciphertext: String,
-    salt: String,
+use states::AppState;
+
+fn parse_log_level(level: Option<&str>) -> log::LevelFilter {
+    let level = level.unwrap_or("info");
+
+    match level.to_lowercase().as_str() {
+        "off" => log::LevelFilter::Off,
+        "error" => log::LevelFilter::Error,
+        "warn" => log::LevelFilter::Warn,
+        "info" => log::LevelFilter::Info,
+        "debug" => log::LevelFilter::Debug,
+        _ => {
+            eprintln!("Invalid log level '{}', defaulting to 'info'", level);
+            log::LevelFilter::Info
+        }
+    }
 }
 
-#[tauri::command]
-fn set_secret(secret: String, state: State<'_, CryptoState>) -> Result<(), String> {
-    state.set_secret(secret).map_err(|e| e.to_string())
-}
+fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let show = MenuItemBuilder::with_id("show", "Show").build(app)?;
+    let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+    let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
 
-#[tauri::command]
-fn encrypt_message(
-    payload: String,
-    state: State<'_, CryptoState>,
-) -> Result<EncryptedMessage, String> {
-    let secret = state.get_secret().map_err(|e| e.to_string())?;
+    TrayIconBuilder::new()
+        .icon(Image::from_bytes(include_bytes!("../icons/32x32.png"))?)
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| {
+            if let Some(window) = app.get_webview_window("main") {
+                match event.id().as_ref() {
+                    "show" => {
+                        let _ = window.unminimize();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                }
+            }
+        })
+        .on_tray_icon_event(|tray, event| {
+            if matches!(
+                event,
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                }
+            ) {
+                if let Some(window) = tray.app_handle().get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        })
+        .build(app)?;
 
-    let salt_bytes = CryptoManager::generate_salt();
-    let key = CryptoManager::derive_key(&secret, &salt_bytes).map_err(|e| e.to_string())?;
-    let (ciphertext, nonce) =
-        CryptoManager::encrypt(&key, payload.as_bytes()).map_err(|e| e.to_string())?;
-
-    Ok(EncryptedMessage {
-        iv: general_purpose::STANDARD.encode(nonce),
-        ciphertext: general_purpose::STANDARD.encode(ciphertext),
-        salt: general_purpose::STANDARD.encode(salt_bytes),
-    })
-}
-
-#[tauri::command]
-fn decrypt_message(
-    message: EncryptedMessage,
-    state: State<'_, CryptoState>,
-) -> Result<String, String> {
-    let secret = state.get_secret().map_err(|e| e.to_string())?;
-
-    let salt_bytes = general_purpose::STANDARD
-        .decode(&message.salt)
-        .map_err(|_| "Invalid Salt base64".to_string())?;
-
-    let key = CryptoManager::derive_key(&secret, &salt_bytes).map_err(|e| e.to_string())?;
-
-    let nonce = general_purpose::STANDARD
-        .decode(&message.iv)
-        .map_err(|_| "Invalid IV base64".to_string())?;
-    let ciphertext = general_purpose::STANDARD
-        .decode(&message.ciphertext)
-        .map_err(|_| "Invalid ciphertext base64".to_string())?;
-    let decrypted = CryptoManager::decrypt(&key, &ciphertext, &nonce).map_err(|e| e.to_string())?;
-
-    String::from_utf8(decrypted).map_err(|_| "Decrypted data is not valid UTF-8".to_string())
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(CryptoState::default())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::Webview),
+                ])
+                .level(parse_log_level(option_env!("LOG_LEVEL")))
+                .build(),
+        )
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .invoke_handler(tauri::generate_handler![
-            set_secret,
-            encrypt_message,
-            decrypt_message
-        ])
-        .run(tauri::generate_context!())
-        .map_err(|e| {
-            eprintln!("Error while running tauri application: {}", e);
+        .manage(AppState::default())
+        .setup(|app| {
+            setup_tray(app)?;
+            Ok(())
         })
-        .ok();
+        .invoke_handler(tauri::generate_handler![
+            commands::crypto::encrypt_message,
+            commands::crypto::decrypt_message,
+            commands::platform::get_device_name,
+            commands::secret::set_secret,
+            commands::secret::unset_secret,
+            commands::secret::save_secret,
+            commands::secret::load_secret,
+            commands::secret::clear_secret,
+            commands::window::show_window,
+            commands::window::minimize_window,
+            commands::window::quit_app,
+        ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.emit("close-requested", ());
+            }
+        })
+        .run(tauri::generate_context!())
+        .expect("failed to run app");
 }

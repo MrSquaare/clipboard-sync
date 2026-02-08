@@ -1,68 +1,98 @@
-import type { PeerId } from "@clipboard-sync/schemas";
+import type { ClientId, ServerMessage } from "@clipboard-sync/schemas";
 
-import type { EncryptedMessage } from "./crypto";
-import type { SignalingService } from "./signaling";
-import type { Transport, TransportEvents } from "./transport";
+import { EncryptionError } from "../errors/crypto";
+import { EventEmitter } from "../lib/event-emitter";
+import { MessageSchema, type Message } from "../schemas/message";
 
-/**
- * Wraps the SignalingService to act as a Transport for encrypted data payloads.
- * This allows the NetworkManager to treat Relay just like P2P.
- */
-export class RelayTransport implements Transport {
-  private signaling: SignalingService;
-  private listener: TransportEvents | null = null;
+import { CryptoService } from "./crypto";
+import { Logger } from "./logger";
+import { websocketService, type WebSocketService } from "./websocket";
 
-  constructor(signaling: SignalingService) {
-    this.signaling = signaling;
+const logger = new Logger("Relay");
+
+type RelayEventMap = {
+  message: [senderId: ClientId, message: Message];
+};
+
+export class RelayTransport {
+  private readonly ws: WebSocketService;
+  private readonly crypto = new CryptoService();
+  private readonly events = new EventEmitter<RelayEventMap>();
+
+  on = this.events.on.bind(this.events);
+
+  constructor(ws: WebSocketService) {
+    this.ws = ws;
+
+    this.setupEventHandlers();
   }
 
-  public setListener(listener: TransportEvents): void {
-    this.listener = listener;
+  private setupEventHandlers(): void {
+    this.ws.on("message", (message) => this.handleMessage(message));
   }
 
-  public async connect(_targetId?: PeerId): Promise<void> {
-    // Relay is connected when Signaling is connected.
-    // If Signaling is already connected, we just emit status.
-    if (this.signaling.isConnected()) {
-      this.listener?.onStatusChange("connected");
-    } else {
-      // We generally assume the Manager connects Signaling explicitly,
-      // but this could trigger it if we wanted strict autonomy.
-      // For this design, we assume 'connect' here is a no-op
-      // because Signaling is managed at a higher level,
-      // OR we map it to ensuring Signaling is up.
+  private async handleMessage(message: ServerMessage): Promise<void> {
+    if (message.type !== "RELAY_BROADCAST" && message.type !== "RELAY_SEND") {
+      return;
+    }
+
+    const { senderId, payload } = message;
+
+    try {
+      const decrypted = await this.crypto.decryptMessage(payload);
+      const result = MessageSchema.safeParse(JSON.parse(decrypted));
+
+      if (!result.success) {
+        logger.warn(
+          `Invalid relay message from ${senderId}: ${result.error.message}`,
+        );
+        return;
+      }
+
+      const msg = result.data;
+
+      logger.debug(`Received ${msg.type} from ${senderId}`);
+
+      this.events.emit("message", senderId, msg);
+    } catch (error) {
+      logger.error(`Failed to handle message from ${senderId}`, error);
     }
   }
 
-  public disconnect(): void {
-    // We do NOT disconnect the signaling service here,
-    // because P2P might still need it.
-    // We just stop reporting "connected" for this transport view.
-    this.listener?.onStatusChange("disconnected");
+  async broadcast(message: Message): Promise<void> {
+    try {
+      logger.debug(`Broadcasting ${message.type}`);
+
+      const payload = await this.crypto.encryptMessage(JSON.stringify(message));
+
+      this.ws.send({
+        type: "RELAY_BROADCAST",
+        payload,
+      });
+    } catch (error) {
+      logger.error("Failed to broadcast message", error);
+
+      throw new EncryptionError("Failed to encrypt broadcast message", error);
+    }
   }
 
-  public async send(
-    payload: EncryptedMessage,
-    _targetId?: PeerId,
-  ): Promise<void> {
-    this.signaling.sendRelayData(payload);
-  }
+  async sendTo(targetId: ClientId, message: Message): Promise<void> {
+    try {
+      logger.debug(`Sending ${message.type} to ${targetId}`);
 
-  // --- External Hooks ---
+      const payload = await this.crypto.encryptMessage(JSON.stringify(message));
 
-  // These are called by the Manager when events come from Signaling
+      this.ws.send({
+        type: "RELAY_SEND",
+        targetId,
+        payload,
+      });
+    } catch (error) {
+      logger.error(`Failed to send message to ${targetId}`, error);
 
-  public handleStatusChange(
-    status: "disconnected" | "connecting" | "connected" | "reconnecting",
-  ) {
-    this.listener?.onStatusChange(status);
-  }
-
-  public handleMessage(senderId: PeerId, payload: EncryptedMessage) {
-    this.listener?.onMessage(payload, senderId);
-  }
-
-  public handleError(error: Error) {
-    this.listener?.onError(error);
+      throw new EncryptionError("Failed to encrypt message", error);
+    }
   }
 }
+
+export const relayTransport = new RelayTransport(websocketService);

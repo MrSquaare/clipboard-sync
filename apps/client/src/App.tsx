@@ -1,32 +1,40 @@
 import "@mantine/core/styles.css";
 
 import { MantineProvider } from "@mantine/core";
+import { attachConsole } from "@tauri-apps/plugin-log";
+import { type FC } from "react";
 
-import { Dashboard } from "./components/dashboard/Dashboard";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Setup } from "./components/setup/Setup";
-import { NetworkProvider } from "./contexts/network";
-import { useClipboard } from "./hooks/useClipboard";
-import { useNetworkStore } from "./store/useNetworkStore";
+import { ErrorBoundary } from "./components/error-boundary";
+import { LoadingOverlay } from "./components/loading-overlay";
+import { useWindowBehavior } from "./hooks/use-window-behavior";
+import { ConnectionScreen } from "./screens/connection";
+import { RoomScreen } from "./screens/room";
+import { useConnectionStore } from "./stores/connection";
 
-function AppContent() {
-  const connectionStatus = useNetworkStore((s) => s.connectionStatus);
+attachConsole();
 
-  useClipboard();
+const AppContent: FC = () => {
+  const { status } = useConnectionStore();
 
-  return connectionStatus === "disconnected" ? <Setup /> : <Dashboard />;
-}
+  useWindowBehavior();
 
-function App() {
+  if (["reconnecting", "disconnecting"].includes(status)) {
+    return <LoadingOverlay />;
+  }
+
+  if (status === "connected") {
+    return <RoomScreen />;
+  }
+
+  return <ConnectionScreen />;
+};
+
+export const App: FC = () => {
   return (
-    <MantineProvider defaultColorScheme={"dark"} forceColorScheme={"dark"}>
+    <MantineProvider defaultColorScheme={"dark"}>
       <ErrorBoundary>
-        <NetworkProvider>
-          <AppContent />
-        </NetworkProvider>
+        <AppContent />
       </ErrorBoundary>
     </MantineProvider>
   );
-}
-
-export default App;
+};
