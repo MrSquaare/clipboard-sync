@@ -47,7 +47,9 @@ export const ConnectionScreen: FC = () => {
 
   const handleResetClientName = () => {
     platformService.getDeviceName().then((name) => {
-      form.setFieldValue("clientName", name);
+      if (name) {
+        form.setFieldValue("clientName", name);
+      }
     });
   };
 

@@ -1,6 +1,5 @@
 import { Modal, Stack } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { zod4Resolver } from "mantine-form-zod-resolver";
 import { useEffect, type FC } from "react";
 
@@ -8,6 +7,7 @@ import {
   SettingsFormSchema,
   type SettingsFormValues,
 } from "../../schemas/settings-form";
+import { platformService } from "../../services/platform";
 import { useConnectionStore } from "../../stores/connection";
 import { useSettingsStore } from "../../stores/settings";
 
@@ -42,7 +42,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
   };
 
   const handleSyncLaunchOnStart = () => {
-    isEnabled().then((enabled) => {
+    platformService.isAutoStartEnabled().then((enabled) => {
       form.setFieldValue("launchOnStart", enabled);
     });
   };
@@ -66,9 +66,9 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
     });
 
     if (values.launchOnStart) {
-      await enable();
+      await platformService.enableAutoStart();
     } else {
-      await disable();
+      await platformService.disableAutoStart();
     }
 
     onClose();
