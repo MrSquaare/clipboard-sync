@@ -53,7 +53,7 @@ export class ConnectionService {
 
     this.stopPing();
     this.ws.disconnect();
-    this.connectionStore.setStatus("disconnected");
+    this.connectionStore.reset();
   }
 
   private handleError(): void {
@@ -113,10 +113,9 @@ export class ConnectionService {
     this.connectionStore.setStatus("disconnecting");
     this.connectionStore.setError(null);
 
+    this.stopPing();
     this.ws.send({ type: "LEAVE" });
     this.ws.disconnect();
-    this.stopPing();
-    this.connectionStore.reset();
   }
 
   private get connectionStore() {
