@@ -1,3 +1,4 @@
+import type { ClientName, ServerRoomID } from "@clipboard-sync/schemas";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -5,8 +6,8 @@ export type SettingsTransportMode = "auto" | "p2p" | "relay";
 
 export type SettingsStoreState = {
   serverUrl: string;
-  clientName: string;
-  roomId: string;
+  clientName: ClientName;
+  roomId: ServerRoomID;
   transportMode: SettingsTransportMode;
   saveSecret: boolean;
   autoConnectOnStart: boolean;

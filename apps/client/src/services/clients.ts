@@ -6,14 +6,14 @@ import type {
   ServerMessage,
 } from "@clipboard-sync/schemas";
 
-import { useClientsStore, type Client } from "../stores/clients";
+import {
+  useClientsStore,
+  type Client,
+  type ClientTransportMode,
+} from "../stores/clients";
 
 import { Logger } from "./logger";
-import {
-  transportService,
-  type TransportMode,
-  type TransportService,
-} from "./transport";
+import { transportService, type TransportService } from "./transport";
 import { websocketService, WebSocketService } from "./websocket";
 
 const logger = new Logger("Clients");
@@ -102,7 +102,7 @@ export class ClientsService {
 
   private handleTransportMode(
     clientId: ClientId,
-    transportMode: TransportMode,
+    transportMode: ClientTransportMode,
   ): void {
     this.clientsStore.update(clientId, { transport: transportMode });
   }

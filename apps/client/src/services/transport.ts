@@ -2,7 +2,7 @@ import type { ClientId } from "@clipboard-sync/schemas";
 
 import { EventEmitter } from "../lib/event-emitter";
 import type { Message } from "../schemas/message";
-import { useClientsStore } from "../stores/clients";
+import { useClientsStore, type ClientTransportMode } from "../stores/clients";
 import { useSettingsStore } from "../stores/settings";
 
 import { Logger } from "./logger";
@@ -11,11 +11,13 @@ import { relayTransport, type RelayTransport } from "./relay-transport";
 
 const logger = new Logger("Transport");
 
-export type TransportMode = "p2p" | "relay";
-
 type TransportEventMap = {
-  transportMode: [senderId: ClientId, transportMode: TransportMode];
-  message: [senderId: ClientId, message: Message, transportMode: TransportMode];
+  transportMode: [senderId: ClientId, transportMode: ClientTransportMode];
+  message: [
+    senderId: ClientId,
+    message: Message,
+    transportMode: ClientTransportMode,
+  ];
 };
 
 export class TransportService {
@@ -99,7 +101,7 @@ export class TransportService {
 
   initiate(clientId: ClientId): void {
     if (this.transportMode === "relay") {
-      logger.debug("Skipping P2P connection (relay mode)");
+      logger.debug("Skipping P2P connection (Relay mode)");
       return;
     }
 
@@ -108,7 +110,7 @@ export class TransportService {
 
   initiateAll(clientIds: ClientId[]): void {
     if (this.transportMode === "relay") {
-      logger.debug("Skipping P2P connections (relay mode)");
+      logger.debug("Skipping P2P connections (Relay mode)");
       return;
     }
 

@@ -159,25 +159,27 @@ export class PeerClient {
   private createPeerConnection(): void {
     this.teardownPeerConnection();
 
-    this.pc = new RTCPeerConnection(this.options.rtcConfig);
+    const pc = new RTCPeerConnection(this.options.rtcConfig);
+
+    this.pc = pc;
     this.pendingCandidates = [];
 
-    this.pc.onconnectionstatechange = () => {
+    pc.onconnectionstatechange = () => {
       this.handleStateChange();
     };
 
-    this.pc.oniceconnectionstatechange = () => {
+    pc.oniceconnectionstatechange = () => {
       this.handleStateChange();
     };
 
-    this.pc.ondatachannel = (event) => {
+    pc.ondatachannel = (event) => {
       this.teardownDataChannel();
 
       this.channel = event.channel;
       this.attachChannelHandlers(this.channel);
     };
 
-    this.pc.onicecandidate = (event) => {
+    pc.onicecandidate = (event) => {
       const candidate = event.candidate ? event.candidate.toJSON() : null;
 
       this.events.emit("signal", { type: "candidate", candidate });

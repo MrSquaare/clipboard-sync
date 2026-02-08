@@ -1,4 +1,8 @@
-import type { ClientMessage, ServerMessage } from "@clipboard-sync/schemas";
+import type {
+  ClientMessage,
+  ServerMessage,
+  ServerRoomID,
+} from "@clipboard-sync/schemas";
 import { ServerMessageSchema } from "@clipboard-sync/schemas";
 
 import {
@@ -15,7 +19,7 @@ const logger = new Logger("WebSocket");
 
 export type WebSocketServiceConfig = {
   url: string;
-  roomId: string;
+  roomId: ServerRoomID;
 };
 
 type WebSocketEventMap = {

@@ -1,11 +1,12 @@
+import type { ClientId, ClientName } from "@clipboard-sync/schemas";
 import { create } from "zustand";
 
-export type ClientTransportType = "p2p" | "relay";
+export type ClientTransportMode = "p2p" | "relay";
 
 export type Client = {
-  id: string;
-  name: string;
-  transport: ClientTransportType;
+  id: ClientId;
+  name: ClientName;
+  transport: ClientTransportMode;
 };
 
 export type ClientsStoreState = {
@@ -13,10 +14,10 @@ export type ClientsStoreState = {
 };
 
 export type ClientStoreActions = {
-  getById(clientId: string): Client | undefined;
+  getById(clientId: ClientId): Client | undefined;
   add(client: Client): void;
-  update(clientId: string, client: Partial<Client>): void;
-  remove(clientId: string): void;
+  update(clientId: ClientId, client: Partial<Client>): void;
+  remove(clientId: ClientId): void;
   set(clients: Client[]): void;
   reset: () => void;
 };

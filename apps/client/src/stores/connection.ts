@@ -1,3 +1,4 @@
+import type { ClientId } from "@clipboard-sync/schemas";
 import { create } from "zustand";
 
 export type ConnectionStatus =
@@ -8,13 +9,13 @@ export type ConnectionStatus =
   | "disconnected";
 
 export type ConnectionStoreState = {
-  clientId: string | null;
+  clientId: ClientId | null;
   status: ConnectionStatus;
   error: string | null;
 };
 
 export type ConnectionStoreActions = {
-  setClientId: (id: string | null) => void;
+  setClientId: (id: ClientId | null) => void;
   setStatus: (status: ConnectionStatus) => void;
   setError: (error: string | null) => void;
   reset: () => void;
