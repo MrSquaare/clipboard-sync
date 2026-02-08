@@ -71,11 +71,12 @@ export const useClipboardSync = () => {
         await writeText(message.content);
 
         lastLocal.current = message.content;
-        writing.current = false;
 
         logger.debug("Clipboard updated from remote");
       } catch (error) {
         logger.error("Failed to write to clipboard", error);
+      } finally {
+        writing.current = false;
       }
     });
 
