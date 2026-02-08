@@ -55,7 +55,7 @@ export class Room extends DurableObject<CloudflareBindings> {
     const result = ServerRoomIDSchema.safeParse(rawRoomId);
 
     if (!result.success) {
-      this.logger.error("Invalid roomId in connection attempt", {
+      this.logger.error("Invalid roomId", {
         rawRoomId,
         error: result.error,
       });
@@ -103,12 +103,11 @@ export class Room extends DurableObject<CloudflareBindings> {
       });
 
       if (msg.type === "HELLO") {
-        this.handleHello(ws, msg.payload);
+        this.handleHello(session, msg.payload);
         return;
       }
 
       if (!this.isValidClientSession(session)) {
-        console.log(session);
         this.logger.error("Message received before HELLO");
         this.sendError(session, "Message received before HELLO");
         return;
@@ -133,7 +132,7 @@ export class Room extends DurableObject<CloudflareBindings> {
         clientId: attachment?.id,
         error,
       });
-      this.sendError(session, "Malformed message payload");
+      this.sendError(session, "Error handling message");
     }
   }
 
@@ -171,26 +170,37 @@ export class Room extends DurableObject<CloudflareBindings> {
     this.webSocketClose(ws, 1006, `Error: ${error}`, false);
   }
 
-  private handleHello(ws: WebSocket, payload: ClientHelloMessage["payload"]) {
-    const attachment = this.buildClientSessionAttachment(payload);
-    const session: ClientSession = { ws, attachment };
+  private handleHello(
+    session: ClientUnknownSession,
+    payload: ClientHelloMessage["payload"],
+  ) {
+    const attachment =
+      session.attachment ?? this.buildClientSessionAttachment(payload);
+    const newSession: ClientSession = { ws: session.ws, attachment };
 
-    ws.serializeAttachment(attachment);
+    newSession.ws.serializeAttachment(session.attachment);
 
     const otherClientSessions = this.getClientSessions({
-      exclude: [session.attachment.id],
+      exclude: [newSession.attachment.id],
     });
     const otherClientInfos = this.buildClientInfos(otherClientSessions);
 
-    this.send(session, {
+    this.send(newSession, {
       type: "WELCOME",
       payload: {
-        clientId: attachment.id,
+        clientId: newSession.attachment.id,
         clients: otherClientInfos,
       },
     });
 
-    const clientInfo = this.buildClientInfo(session);
+    if (this.isValidClientSession(session)) {
+      this.logger.warn("HELLO message received for existing session", {
+        clientId: session.attachment.id,
+      });
+      return;
+    }
+
+    const clientInfo = this.buildClientInfo(newSession);
 
     this.logger.info("Client joined", clientInfo);
 
@@ -245,7 +255,7 @@ export class Room extends DurableObject<CloudflareBindings> {
     try {
       this.send(targetSession, {
         type: "RELAY_SEND",
-        senderId: targetSession.attachment.id,
+        senderId: session.attachment.id,
         payload: payload,
       });
     } catch (error) {
@@ -274,7 +284,14 @@ export class Room extends DurableObject<CloudflareBindings> {
   }
 
   private sendError(target: ClientUnknownSession, message: string) {
-    this.send(target, { type: "ERROR", payload: { message } });
+    try {
+      this.send(target, { type: "ERROR", payload: { message } });
+    } catch (error) {
+      this.logger.error("Send error message failed", {
+        targetId: target.attachment?.id,
+        error,
+      });
+    }
   }
 
   private broadcast(targets: ClientSession[], message: ServerMessage) {
