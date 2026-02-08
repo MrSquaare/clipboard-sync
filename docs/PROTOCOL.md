@@ -6,7 +6,7 @@ This document specifies the communication protocols used in Clipboard Sync, incl
 
 ### P2P Transport Encryption
 
-P2P connections use WebRTC's built-in encryption (DTLS/SRTP) and do not require additional application-level encryption.
+P2P connections use WebRTC's built-in secure transport (DTLS) and do not require additional application-level encryption.
 
 ### Relay Transport Encryption
 
@@ -15,7 +15,7 @@ Messages sent through the Relay server are end-to-end encrypted using the follow
 **Algorithm**
 
 - **Cipher**: AES-256-GCM (Authenticated Encryption with Associated Data)
-- **Key Derivation**: Argon2 (default parameters)
+- **Key Derivation**: Argon2 (Argon2id, default parameters from [`argon2` crate](https://docs.rs/argon2/latest/argon2/))
 - **Salt**: 128-bit (16 bytes), randomly generated per message
 - **Nonce/IV**: 96-bit (12 bytes), randomly generated per encryption
 

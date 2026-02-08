@@ -20,7 +20,7 @@ Manages networking, application logic and user interface:
 
 ## Server
 
-The server is a lightweight **Hono** application deployed on **Cloudflare Workers** application using **Durable Objects** for room management.
+The server is a lightweight **Hono** application deployed on **Cloudflare Workers** using **Durable Objects** for room management.
 
 - **Room management**: Maintains isolated state per room with connected clients
 - **Signaling**: Facilitates WebRTC peer-to-peer connection establishment

@@ -6,8 +6,7 @@ Clipboard Sync ensures data privacy through encryption at multiple layers:
 
 ### P2P Transport
 WebRTC connections use built-in security protocols:
-- **DTLS** (Datagram Transport Layer Security) for key exchange
-- **SRTP** (Secure Real-time Transport Protocol) for data channel encryption
+- **DTLS** (Datagram Transport Layer Security)
 
 The server is only involved in initial signaling and never sees the actual data.
 
