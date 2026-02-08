@@ -13,15 +13,15 @@ import { IconAlertCircle, IconSettings } from "@tabler/icons-react";
 import { zod4Resolver } from "mantine-form-zod-resolver";
 import { type FC } from "react";
 
-import {
-  ConnectionForm,
-  ConnectionFormSchema,
-  type ConnectionFormValues,
-} from "../components/connection/form";
+import { ConnectionForm } from "../components/connection/form";
 import { SettingsModal } from "../components/settings/modal";
 import { useAutoConnect } from "../hooks/use-auto-connection";
 import { useConnection } from "../hooks/use-connection";
 import { useOneTimeEffect } from "../hooks/use-one-time-effect";
+import {
+  ConnectionFormSchema,
+  type ConnectionFormValues,
+} from "../schemas/connection-form";
 import { platformService } from "../services/platform";
 import { secretService } from "../services/secret";
 import { useConnectionStore } from "../stores/connection";

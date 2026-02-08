@@ -4,14 +4,14 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { zod4Resolver } from "mantine-form-zod-resolver";
 import { useEffect, type FC } from "react";
 
+import {
+  SettingsFormSchema,
+  type SettingsFormValues,
+} from "../../schemas/settings-form";
 import { useConnectionStore } from "../../stores/connection";
 import { useSettingsStore } from "../../stores/settings";
 
-import {
-  SettingsForm,
-  SettingsFormSchema,
-  type SettingsFormValues,
-} from "./form";
+import { SettingsForm } from "./form";
 
 export type SettingsModalProps = {
   opened: boolean;
