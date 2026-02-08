@@ -34,7 +34,7 @@ export type SettingsFormProps = {
   form: UseFormReturnType<SettingsFormValues>;
   onSubmit: (values: SettingsFormValues) => Promise<void>;
   onClose: () => void;
-  onResetServerURL: CallableFunction;
+  onResetServerURL: () => void;
   connected: boolean;
 };
 

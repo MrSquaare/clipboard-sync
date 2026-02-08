@@ -16,7 +16,7 @@ import type { ConnectionFormValues } from "../../schemas/connection-form";
 export type ConnectionFormProps = {
   form: UseFormReturnType<ConnectionFormValues>;
   onSubmit: (values: ConnectionFormValues) => void;
-  onResetClientName: CallableFunction;
+  onResetClientName: () => void;
   loading: boolean;
 };
 
