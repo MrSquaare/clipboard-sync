@@ -198,7 +198,7 @@ export class WebSocketClient {
     state: T,
     ...args: WebSocketClientEventMap[T]
   ): void {
-    if (this.state === state) {
+    if (this.state === state && state !== "reconnecting") {
       return;
     }
 

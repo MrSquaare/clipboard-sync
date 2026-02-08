@@ -411,7 +411,7 @@ export class PeerClient {
     state: T,
     ...args: PeerClientEventMap[T]
   ): void {
-    if (this.state === state) {
+    if (this.state === state && state !== "reconnecting") {
       return;
     }
 
