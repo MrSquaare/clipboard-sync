@@ -50,10 +50,10 @@ export class TransportService {
     });
   }
 
-  broadcast(message: Message): void {
+  async broadcast(message: Message): Promise<void> {
     const transportMode = this.transportMode;
 
-    let sentP2P: string[] = [];
+    let sentP2P: ClientId[] = [];
 
     if (transportMode === "auto" || transportMode === "p2p") {
       sentP2P = this.p2p.broadcast(message);
@@ -64,21 +64,21 @@ export class TransportService {
     }
 
     if (transportMode === "auto" || transportMode === "relay") {
-      const relayClients = this.clients.filter(
-        (client) => !sentP2P.includes(client.id),
-      );
+      const relayClientIds = this.clients
+        .filter((client) => !sentP2P.includes(client.id))
+        .map((client) => client.id);
 
-      if (relayClients.length > 0) {
-        this.relay.broadcast(message);
+      if (relayClientIds.length > 0) {
+        await this.relay.broadcast(relayClientIds, message);
 
         logger.debug(
-          `Broadcasted to ${relayClients.length} client(s) via relay`,
+          `Broadcasted to ${relayClientIds.length} client(s) via Relay`,
         );
       }
     }
   }
 
-  sendTo(clientId: ClientId, message: Message): void {
+  async sendTo(clientId: ClientId, message: Message): Promise<void> {
     const transportMode = this.transportMode;
 
     if (transportMode === "auto" || transportMode === "p2p") {
@@ -91,9 +91,9 @@ export class TransportService {
     }
 
     if (transportMode === "auto" || transportMode === "relay") {
-      this.relay.sendTo(clientId, message);
+      await this.relay.sendTo(clientId, message);
 
-      logger.debug(`Sent ${message.type} to ${clientId} via relay`);
+      logger.debug(`Sent ${message.type} to ${clientId} via Relay`);
     }
   }
 

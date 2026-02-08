@@ -59,7 +59,7 @@ export class RelayTransport {
     }
   }
 
-  async broadcast(message: Message): Promise<void> {
+  async broadcast(targetIds: ClientId[], message: Message): Promise<void> {
     try {
       logger.debug(`Broadcasting ${message.type}`);
 
@@ -67,6 +67,7 @@ export class RelayTransport {
 
       this.ws.send({
         type: "RELAY_BROADCAST",
+        targetIds,
         payload,
       });
     } catch (error) {
