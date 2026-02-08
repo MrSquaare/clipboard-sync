@@ -1,6 +1,5 @@
 import type { ClientId, ServerMessage } from "@clipboard-sync/schemas";
 
-import { EncryptionError } from "../errors/crypto";
 import { EventEmitter } from "../lib/event-emitter";
 import { MessageSchema, type Message } from "../schemas/message";
 
@@ -72,8 +71,6 @@ export class RelayTransport {
       });
     } catch (error) {
       logger.error("Failed to broadcast message", error);
-
-      throw new EncryptionError("Failed to encrypt broadcast message", error);
     }
   }
 
@@ -90,8 +87,6 @@ export class RelayTransport {
       });
     } catch (error) {
       logger.error(`Failed to send message to ${targetId}`, error);
-
-      throw new EncryptionError("Failed to encrypt message", error);
     }
   }
 }
