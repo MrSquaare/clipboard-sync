@@ -23,22 +23,28 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
   const connected = status === "connected";
   const settings = useSettingsStore();
 
+  const getFormInitialValues = (): SettingsFormValues => ({
+    serverUrl: settings.serverUrl,
+    transportMode: settings.transportMode,
+    pingInterval: settings.pingInterval,
+    pollingInterval: settings.pollingInterval,
+    launchOnStart: false,
+    minimizeOnStart: settings.minimizeOnStart,
+    minimizeOnClose: settings.minimizeOnClose,
+    developerMode: settings.developerMode,
+  });
+
   const form = useForm<SettingsFormValues>({
-    initialValues: {
-      serverUrl: settings.serverUrl,
-      transportMode: settings.transportMode,
-      pingInterval: settings.pingInterval,
-      pollingInterval: settings.pollingInterval,
-      launchOnStart: false,
-      minimizeOnStart: settings.minimizeOnStart,
-      minimizeOnClose: settings.minimizeOnClose,
-      developerMode: settings.developerMode,
-    },
+    initialValues: getFormInitialValues(),
     validate: zod4Resolver(SettingsFormSchema),
   });
 
   const handleResetServerURL = () => {
     form.setFieldValue("serverUrl", __DEFAULT_SERVER_URL__);
+  };
+
+  const handleSyncSettings = () => {
+    form.setValues(getFormInitialValues());
   };
 
   const handleSyncLaunchOnStart = () => {
@@ -49,6 +55,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
 
   useEffect(() => {
     if (opened) {
+      handleSyncSettings();
       handleSyncLaunchOnStart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
