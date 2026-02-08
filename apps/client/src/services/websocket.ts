@@ -98,12 +98,6 @@ export class WebSocketService {
       this.events.emit("disconnect");
     });
 
-    client.on("error", () => {
-      logger.error("Error");
-
-      this.events.emit("error");
-    });
-
     client.on("closed", () => {
       logger.debug("Closed");
 
@@ -115,7 +109,7 @@ export class WebSocketService {
     });
 
     client.on("error", (event) => {
-      logger.error("WebSocket error occurred", event);
+      logger.error("Error", event);
 
       this.events.emit("error");
     });
