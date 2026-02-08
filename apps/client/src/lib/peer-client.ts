@@ -120,12 +120,10 @@ export class PeerClient {
       return;
     }
 
-    const pc = this.pc;
-
     try {
       if (signal.type === "candidate") {
-        if (pc.remoteDescription) {
-          await pc.addIceCandidate(signal.candidate);
+        if (this.pc.remoteDescription) {
+          await this.pc.addIceCandidate(signal.candidate);
         } else if (signal.candidate) {
           this.pendingCandidates.push(signal.candidate);
         }
@@ -134,23 +132,23 @@ export class PeerClient {
 
       if (
         signal.type === "offer" &&
-        (pc.signalingState !== "stable" ||
-          pc.connectionState === "failed" ||
-          pc.connectionState === "closed")
+        (this.pc.signalingState !== "stable" ||
+          this.pc.connectionState === "failed" ||
+          this.pc.connectionState === "closed")
       ) {
         this.createPeerConnection();
       }
 
-      await pc.setRemoteDescription(signal);
+      await this.pc.setRemoteDescription(signal);
       await this.flushPendingCandidates();
 
       if (signal.type === "offer") {
-        const answer = await pc.createAnswer();
+        const answer = await this.pc.createAnswer();
 
-        await pc.setLocalDescription(answer);
+        await this.pc.setLocalDescription(answer);
 
-        if (pc.localDescription) {
-          this.events.emit("signal", pc.localDescription);
+        if (this.pc.localDescription) {
+          this.events.emit("signal", this.pc.localDescription);
         }
       }
     } catch (error) {
