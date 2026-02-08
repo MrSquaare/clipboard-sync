@@ -1,6 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
-  "mcpServers": {
+  "servers": {
     "context7": {
       "type": "stdio",
       "command": "npx",
@@ -23,6 +22,6 @@
     "cloudflare-docs": {
       "type": "http",
       "url": "https://docs.mcp.cloudflare.com/mcp"
-    }
+    },
   }
 }
