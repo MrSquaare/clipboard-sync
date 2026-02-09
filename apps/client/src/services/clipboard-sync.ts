@@ -20,6 +20,21 @@ export class ClipboardSyncService {
 
   on = this.events.on.bind(this.events);
 
+  send(content: string): void {
+    const message: ClipboardUpdateMessage = {
+      type: "CLIPBOARD_UPDATE",
+      id: crypto.randomUUID(),
+      content,
+      timestamp: Date.now(),
+    };
+
+    this.transport.broadcast(message);
+  }
+
+  reset(): void {
+    this.clipboardStore.reset();
+  }
+
   constructor(transport: TransportService) {
     this.transport = transport;
 
@@ -55,21 +70,6 @@ export class ClipboardSyncService {
 
     this.clipboardStore.setLastMessage(message);
     this.events.emit("update", message);
-  }
-
-  send(content: string): void {
-    const message: ClipboardUpdateMessage = {
-      type: "CLIPBOARD_UPDATE",
-      id: crypto.randomUUID(),
-      content,
-      timestamp: Date.now(),
-    };
-
-    this.transport.broadcast(message);
-  }
-
-  reset(): void {
-    this.clipboardStore.reset();
   }
 
   private get clipboardStore() {

@@ -24,10 +24,10 @@ export type WebSocketServiceConfig = {
 };
 
 type WebSocketEventMap = {
-  connect: [];
-  reconnect: [];
-  disconnect: [];
-  close: [];
+  connected: [];
+  reconnecting: [];
+  disconnected: [];
+  closed: [];
   message: [message: ServerMessage];
   error: [];
 };
@@ -101,13 +101,13 @@ export class WebSocketService {
     client.on("connected", () => {
       logger.debug("Connected");
 
-      this.events.emit("connect");
+      this.events.emit("connected");
     });
 
     client.on("reconnecting", (delay, attempt) => {
       logger.debug(`Reconnecting in ${delay}ms (attempt ${attempt})`);
 
-      this.events.emit("reconnect");
+      this.events.emit("reconnecting");
     });
 
     client.on("disconnected", (code, reason, clean) => {
@@ -116,14 +116,14 @@ export class WebSocketService {
       );
 
       client.close();
-      this.events.emit("disconnect");
+      this.events.emit("disconnected");
     });
 
     client.on("closed", () => {
       logger.debug("Closed");
 
       this.client = null;
-      this.events.emit("close");
+      this.events.emit("closed");
     });
 
     client.on("message", (message) => {

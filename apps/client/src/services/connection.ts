@@ -15,6 +15,31 @@ export class ConnectionService {
   private readonly ws: WebSocketService;
   private pingTimer: number | null = null;
 
+  connect(): void {
+    const { serverUrl, roomId } = this.settingsStore;
+
+    logger.info(`Connecting to room ${roomId}`);
+
+    this.connectionStore.setStatus("connecting");
+    this.connectionStore.setError(null);
+
+    this.ws.connect({
+      url: serverUrl,
+      roomId,
+    });
+  }
+
+  disconnect(): void {
+    logger.info("Disconnecting from server");
+
+    this.connectionStore.setStatus("disconnecting");
+    this.connectionStore.setError(null);
+
+    this.stopPing();
+    this.ws.send({ type: "LEAVE" });
+    this.ws.disconnect();
+  }
+
   constructor(ws: WebSocketService) {
     this.ws = ws;
 
@@ -22,15 +47,15 @@ export class ConnectionService {
   }
 
   private setupEventHandlers(): void {
-    this.ws.on("connect", () => this.handleConnect());
-    this.ws.on("reconnect", () => this.handleReconnect());
-    this.ws.on("disconnect", () => this.handleDisconnect());
-    this.ws.on("close", () => this.handleClose());
+    this.ws.on("connected", () => this.handleConnected());
+    this.ws.on("reconnecting", () => this.handleReconnecting());
+    this.ws.on("disconnected", () => this.handleDisconnected());
+    this.ws.on("closed", () => this.handleClosed());
     this.ws.on("message", (message) => this.handleMessage(message));
     this.ws.on("error", () => this.handleError());
   }
 
-  private handleConnect(): void {
+  private handleConnected(): void {
     const { clientName } = this.settingsStore;
 
     logger.debug(`Sending HELLO with client name: ${clientName}`);
@@ -46,20 +71,20 @@ export class ConnectionService {
     this.startPing();
   }
 
-  private handleReconnect(): void {
+  private handleReconnecting(): void {
     logger.info("Reconnecting to server...");
 
     this.connectionStore.setStatus("reconnecting");
   }
 
-  private handleDisconnect(): void {
+  private handleDisconnected(): void {
     logger.info("Disconnected from server");
 
     this.stopPing();
     this.connectionStore.setStatus("disconnected");
   }
 
-  private handleClose(): void {
+  private handleClosed(): void {
     logger.info("Connection closed");
   }
 
@@ -106,31 +131,6 @@ export class ConnectionService {
 
       logger.debug("Ping timer stopped");
     }
-  }
-
-  connect(): void {
-    const { serverUrl, roomId } = this.settingsStore;
-
-    logger.info(`Connecting to room ${roomId}`);
-
-    this.connectionStore.setStatus("connecting");
-    this.connectionStore.setError(null);
-
-    this.ws.connect({
-      url: serverUrl,
-      roomId,
-    });
-  }
-
-  disconnect(): void {
-    logger.info("Disconnecting from server");
-
-    this.connectionStore.setStatus("disconnecting");
-    this.connectionStore.setError(null);
-
-    this.stopPing();
-    this.ws.send({ type: "LEAVE" });
-    this.ws.disconnect();
   }
 
   private get connectionStore() {

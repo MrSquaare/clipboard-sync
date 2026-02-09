@@ -25,6 +25,38 @@ export class RelayTransport {
 
   on = this.events.on.bind(this.events);
 
+  async broadcast(targetIds: ClientId[], message: Message): Promise<void> {
+    try {
+      logger.debug(`Broadcasting ${message.type}`);
+
+      const payload = await this.crypto.encryptMessage(JSON.stringify(message));
+
+      this.ws.send({
+        type: "RELAY_BROADCAST",
+        targetIds,
+        payload,
+      });
+    } catch (error) {
+      logger.error("Failed to broadcast message", error);
+    }
+  }
+
+  async sendTo(targetId: ClientId, message: Message): Promise<void> {
+    try {
+      logger.debug(`Sending ${message.type} to ${targetId}`);
+
+      const payload = await this.crypto.encryptMessage(JSON.stringify(message));
+
+      this.ws.send({
+        type: "RELAY_SEND",
+        targetId,
+        payload,
+      });
+    } catch (error) {
+      logger.error(`Failed to send message to ${targetId}`, error);
+    }
+  }
+
   constructor(ws: WebSocketService) {
     this.ws = ws;
 
@@ -67,38 +99,6 @@ export class RelayTransport {
       this.events.emit("message", senderId, msg);
     } catch (error) {
       logger.error(`Failed to handle message from ${senderId}`, error);
-    }
-  }
-
-  async broadcast(targetIds: ClientId[], message: Message): Promise<void> {
-    try {
-      logger.debug(`Broadcasting ${message.type}`);
-
-      const payload = await this.crypto.encryptMessage(JSON.stringify(message));
-
-      this.ws.send({
-        type: "RELAY_BROADCAST",
-        targetIds,
-        payload,
-      });
-    } catch (error) {
-      logger.error("Failed to broadcast message", error);
-    }
-  }
-
-  async sendTo(targetId: ClientId, message: Message): Promise<void> {
-    try {
-      logger.debug(`Sending ${message.type} to ${targetId}`);
-
-      const payload = await this.crypto.encryptMessage(JSON.stringify(message));
-
-      this.ws.send({
-        type: "RELAY_SEND",
-        targetId,
-        payload,
-      });
-    } catch (error) {
-      logger.error(`Failed to send message to ${targetId}`, error);
     }
   }
 }

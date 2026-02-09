@@ -22,6 +22,10 @@ export class ClientsService {
   private readonly ws: WebSocketService;
   private readonly transport: TransportService;
 
+  reset(): void {
+    this.clientsStore.reset();
+  }
+
   constructor(ws: WebSocketService, transport: TransportService) {
     this.ws = ws;
     this.transport = transport;
@@ -106,10 +110,6 @@ export class ClientsService {
     transportMode: ClientTransportMode,
   ): void {
     this.clientsStore.update(clientId, { transport: transportMode });
-  }
-
-  reset(): void {
-    this.clientsStore.reset();
   }
 
   private get clientsStore() {

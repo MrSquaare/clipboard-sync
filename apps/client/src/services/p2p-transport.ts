@@ -21,8 +21,11 @@ const logger = new Logger("P2P");
 
 type P2PEventMap = {
   connected: [clientId: ClientId];
+  reconnecting: [clientId: ClientId];
   disconnected: [clientId: ClientId];
+  closed: [clientId: ClientId];
   message: [senderId: ClientId, message: Message];
+  error: [clientId: ClientId, error: unknown];
 };
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -36,26 +39,14 @@ export class P2PTransport {
 
   on = this.events.on.bind(this.events);
 
-  constructor(relay: RelayTransport) {
-    this.relay = relay;
-
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers(): void {
-    this.relay.on("message", (senderId, message) => {
-      this.handleMessage(senderId, message);
-    });
-  }
-
-  async initiate(clientId: ClientId): Promise<void> {
+  initiate(clientId: ClientId): void {
     logger.info(`Initiating with ${clientId}`);
 
     this.ensurePeer(clientId, true);
   }
 
-  async initiateAll(clientIds: ClientId[]): Promise<void> {
-    await Promise.all(clientIds.map((id) => this.initiate(id)));
+  initiateAll(clientIds: ClientId[]): void {
+    clientIds.forEach((id) => this.initiate(id));
   }
 
   disconnect(clientId: ClientId): void {
@@ -112,6 +103,18 @@ export class P2PTransport {
     }
   }
 
+  constructor(relay: RelayTransport) {
+    this.relay = relay;
+
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers(): void {
+    this.relay.on("message", (senderId, message) => {
+      this.handleMessage(senderId, message);
+    });
+  }
+
   private ensurePeer(clientId: ClientId, initiator: boolean): PeerClient {
     const existing = this.peers.get(clientId);
 
@@ -150,6 +153,8 @@ export class P2PTransport {
       logger.info(
         `Peer ${clientId} reconnecting in ${delay}ms (attempt ${attempt})`,
       );
+
+      this.events.emit("reconnecting", clientId);
     });
 
     peer.on("disconnected", (reason) => {
@@ -165,7 +170,7 @@ export class P2PTransport {
       logger.info(`Peer ${clientId} closed`);
 
       this.peers.delete(clientId);
-      this.events.emit("disconnected", clientId);
+      this.events.emit("closed", clientId);
     });
 
     peer.on("signal", (signal) => {
@@ -178,6 +183,8 @@ export class P2PTransport {
 
     peer.on("error", (error) => {
       logger.error(`Peer ${clientId} error`, error);
+
+      this.events.emit("error", clientId, error);
     });
 
     return peer;
@@ -222,6 +229,19 @@ export class P2PTransport {
     }
   }
 
+  private fromPeerMessage(message: PeerMessage): PeerSignal | null {
+    switch (message.type) {
+      case "PEER_OFFER":
+        return { type: "offer", sdp: message.sdp };
+      case "PEER_ANSWER":
+        return { type: "answer", sdp: message.sdp };
+      case "PEER_ICE":
+        return { type: "candidate", candidate: message.candidate };
+      default:
+        return null;
+    }
+  }
+
   private async handlePeerSignal(
     clientId: ClientId,
     signal: PeerSignal,
@@ -239,6 +259,24 @@ export class P2PTransport {
         `Failed to send signal ${signal.type} to ${clientId}`,
         error,
       );
+    }
+  }
+
+  private toPeerMessage(signal: PeerSignal): PeerMessage | null {
+    switch (signal.type) {
+      case "offer":
+      case "answer":
+        return {
+          type: signal.type === "offer" ? "PEER_OFFER" : "PEER_ANSWER",
+          sdp: signal.sdp,
+        };
+      case "candidate":
+        return {
+          type: "PEER_ICE",
+          candidate: signal.candidate,
+        };
+      default:
+        return null;
     }
   }
 
@@ -261,37 +299,6 @@ export class P2PTransport {
       this.events.emit("message", clientId, msg);
     } catch (error) {
       logger.error(`Failed to parse message from ${clientId}`, error);
-    }
-  }
-
-  private fromPeerMessage(message: PeerMessage): PeerSignal | null {
-    switch (message.type) {
-      case "PEER_OFFER":
-        return { type: "offer", sdp: message.sdp };
-      case "PEER_ANSWER":
-        return { type: "answer", sdp: message.sdp };
-      case "PEER_ICE":
-        return { type: "candidate", candidate: message.candidate };
-      default:
-        return null;
-    }
-  }
-
-  private toPeerMessage(signal: PeerSignal): PeerMessage | null {
-    switch (signal.type) {
-      case "offer":
-      case "answer":
-        return {
-          type: signal.type === "offer" ? "PEER_OFFER" : "PEER_ANSWER",
-          sdp: signal.sdp,
-        };
-      case "candidate":
-        return {
-          type: "PEER_ICE",
-          candidate: signal.candidate,
-        };
-      default:
-        return null;
     }
   }
 
