@@ -42,9 +42,7 @@ export class WebSocketService {
   connect(config: WebSocketServiceConfig): void {
     logger.debug("Connecting to server...");
 
-    const client = this.ensureClient(config);
-
-    client.connect();
+    this.ensureClient(config);
   }
 
   disconnect(): void {
@@ -81,6 +79,8 @@ export class WebSocketService {
     const client = this.createClient(config);
 
     this.client = client;
+
+    client.connect();
 
     return client;
   }
