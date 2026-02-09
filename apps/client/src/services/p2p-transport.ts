@@ -157,6 +157,7 @@ export class P2PTransport {
         `Peer ${clientId} disconnected (reason: ${reason ?? "unknown"})`,
       );
 
+      peer.close();
       this.events.emit("disconnected", clientId);
     });
 
