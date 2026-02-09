@@ -4,7 +4,7 @@ export type WebSocketMessage = string;
 
 type WebSocketClientStateEventMap = {
   disconnected: [code: number, reason: string, clean: boolean];
-  connecting: [];
+  connecting: [delay?: number, attempt?: number];
   connected: [];
   reconnecting: [delay: number, attempt: number];
   closed: [];
@@ -21,6 +21,7 @@ export type WebSocketClientOptions = {
   url: string;
   protocols?: string | string[];
   maxRetries?: number;
+  maxFirstRetries?: number;
   baseBackoffMs?: number;
   maxBackoffMs?: number;
 };
@@ -29,7 +30,8 @@ type RequiredOptions = Required<Omit<WebSocketClientOptions, "protocols">> & {
   protocols?: string | string[];
 };
 
-const DEFAULT_MAX_RETRIES = 5;
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_MAX_FIRST_RETRIES = 1;
 const DEFAULT_BASE_BACKOFF_MS = 1000;
 const DEFAULT_MAX_BACKOFF_MS = 30000;
 
@@ -49,6 +51,7 @@ export class WebSocketClient {
       url: options.url,
       protocols: options.protocols,
       maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
+      maxFirstRetries: options.maxFirstRetries ?? DEFAULT_MAX_FIRST_RETRIES,
       baseBackoffMs: options.baseBackoffMs ?? DEFAULT_BASE_BACKOFF_MS,
       maxBackoffMs: options.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS,
     };
@@ -138,7 +141,12 @@ export class WebSocketClient {
       return false;
     }
 
-    if (this.retryCount >= this.options.maxRetries) {
+    const maxRetries =
+      this.state === "connecting"
+        ? this.options.maxFirstRetries
+        : this.options.maxRetries;
+
+    if (this.retryCount >= maxRetries) {
       return false;
     }
 
@@ -148,7 +156,11 @@ export class WebSocketClient {
     );
     const attempt = this.retryCount + 1;
 
-    this.setState("reconnecting", delay, attempt);
+    if (this.state === "connecting") {
+      this.setState("connecting", delay, attempt);
+    } else {
+      this.setState("reconnecting", delay, attempt);
+    }
 
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
@@ -198,7 +210,11 @@ export class WebSocketClient {
     state: T,
     ...args: WebSocketClientEventMap[T]
   ): void {
-    if (this.state === state && state !== "reconnecting") {
+    if (
+      this.state === state &&
+      state !== "connecting" &&
+      state !== "reconnecting"
+    ) {
       return;
     }
 
