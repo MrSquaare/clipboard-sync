@@ -1,4 +1,9 @@
-import type { ClientId, ServerMessage } from "@clipboard-sync/schemas";
+import type {
+  ClientId,
+  ServerMessage,
+  ServerRelayBroadcastMessage,
+  ServerRelaySendMessage,
+} from "@clipboard-sync/schemas";
 
 import { EventEmitter } from "../lib/event-emitter";
 import { MessageSchema, type Message } from "../schemas/message";
@@ -30,11 +35,18 @@ export class RelayTransport {
     this.ws.on("message", (message) => this.handleMessage(message));
   }
 
-  private async handleMessage(message: ServerMessage): Promise<void> {
-    if (message.type !== "RELAY_BROADCAST" && message.type !== "RELAY_SEND") {
-      return;
+  private handleMessage(message: ServerMessage): void {
+    switch (message.type) {
+      case "RELAY_BROADCAST":
+      case "RELAY_SEND":
+        this.handleRelayMessage(message);
+        break;
     }
+  }
 
+  private async handleRelayMessage(
+    message: ServerRelayBroadcastMessage | ServerRelaySendMessage,
+  ): Promise<void> {
     const { senderId, payload } = message;
 
     try {

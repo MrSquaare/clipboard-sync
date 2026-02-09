@@ -2,6 +2,7 @@ import type { ClientId } from "@clipboard-sync/schemas";
 
 import { EventEmitter } from "../lib/event-emitter";
 import type { ClipboardUpdateMessage } from "../schemas/clipboard";
+import type { Message } from "../schemas/message";
 import { useClipboardStore } from "../stores/clipboard";
 
 import { Logger } from "./logger";
@@ -27,10 +28,16 @@ export class ClipboardSyncService {
 
   private setupEventHandlers(): void {
     this.transport.on("message", (senderId, message) => {
-      if (message.type !== "CLIPBOARD_UPDATE") return;
-
-      this.handleClipboardUpdate(senderId, message);
+      this.handleMessage(senderId, message);
     });
+  }
+
+  private handleMessage(senderId: string, message: Message): void {
+    switch (message.type) {
+      case "CLIPBOARD_UPDATE":
+        this.handleClipboardUpdate(senderId, message);
+        break;
+    }
   }
 
   private handleClipboardUpdate(

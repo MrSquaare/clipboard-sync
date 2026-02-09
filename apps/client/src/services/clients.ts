@@ -30,8 +30,9 @@ export class ClientsService {
   }
 
   private setupEventHandlers(): void {
-    this.ws.on("message", (message) => this.handleMessage(message));
-
+    this.ws.on("message", (message) => {
+      this.handleMessage(message);
+    });
     this.transport.on("transportMode", (senderId, transportMode) => {
       this.handleTransportMode(senderId, transportMode);
     });

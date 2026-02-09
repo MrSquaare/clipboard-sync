@@ -1,4 +1,7 @@
-import type { ServerMessage } from "@clipboard-sync/schemas";
+import type {
+  ServerHelloMessage,
+  ServerMessage,
+} from "@clipboard-sync/schemas";
 
 import { useConnectionStore } from "../stores/connection";
 import { useSettingsStore } from "../stores/settings";
@@ -23,8 +26,8 @@ export class ConnectionService {
     this.ws.on("reconnect", () => this.handleReconnect());
     this.ws.on("disconnect", () => this.handleDisconnect());
     this.ws.on("close", () => this.handleClose());
-    this.ws.on("error", () => this.handleError());
     this.ws.on("message", (message) => this.handleMessage(message));
+    this.ws.on("error", () => this.handleError());
   }
 
   private handleConnect(): void {
@@ -58,8 +61,6 @@ export class ConnectionService {
 
   private handleClose(): void {
     logger.info("Connection closed");
-
-    this.connectionStore.reset();
   }
 
   private handleError(): void {
@@ -69,15 +70,21 @@ export class ConnectionService {
   }
 
   private handleMessage(message: ServerMessage): void {
-    if (message.type !== "WELCOME") return;
+    switch (message.type) {
+      case "WELCOME":
+        this.handleWelcome(message);
+        break;
+    }
+  }
 
+  private handleWelcome(message: ServerHelloMessage): void {
     const { clientId } = message.payload;
+
+    logger.info(`Connected with client ID: ${clientId}`);
 
     this.connectionStore.setClientId(clientId);
     this.connectionStore.setStatus("connected");
     this.connectionStore.setError(null);
-
-    logger.info(`Connected with client ID: ${clientId}`);
   }
 
   private startPing(): void {
