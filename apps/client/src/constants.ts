@@ -1,4 +1,6 @@
-export const WEBSOCKET_MAX_RECONNECT_ATTEMPTS = 5;
+export const WEBSOCKET_MAX_RECONNECT_ATTEMPTS = 3;
+
+export const WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS = 0;
 
 export const WEBSOCKET_RECONNECT_BASE_DELAY_MS = 1_000;
 
@@ -9,6 +11,8 @@ export const WEBRTC_STUN_SERVER = "stun:stun.l.google.com:19302";
 export const WEBRTC_DATA_CHANNEL_NAME = "clipboard";
 
 export const WEBRTC_MAX_RESTART_ATTEMPTS = 3;
+
+export const WEBRTC_MAX_FIRST_RESTART_ATTEMPTS = 0;
 
 export const WEBRTC_RESTART_BASE_DELAY_MS = 2_000;
 
