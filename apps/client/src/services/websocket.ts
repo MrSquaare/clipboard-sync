@@ -115,12 +115,14 @@ export class WebSocketService {
         `Disconnected (code: ${code}, reason: ${reason}, clean: ${clean})`,
       );
 
+      client.close();
       this.events.emit("disconnect");
     });
 
     client.on("closed", () => {
       logger.debug("Closed");
 
+      this.client = null;
       this.events.emit("close");
     });
 
