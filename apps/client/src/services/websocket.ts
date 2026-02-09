@@ -6,6 +6,7 @@ import type {
 import { ServerMessageSchema } from "@clipboard-sync/schemas";
 
 import {
+  WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS,
   WEBSOCKET_MAX_RECONNECT_ATTEMPTS,
   WEBSOCKET_RECONNECT_BASE_DELAY_MS,
   WEBSOCKET_RECONNECT_MAX_DELAY_MS,
@@ -26,6 +27,7 @@ type WebSocketEventMap = {
   connect: [];
   reconnect: [];
   disconnect: [];
+  close: [];
   message: [message: ServerMessage];
   error: [];
 };
@@ -38,12 +40,11 @@ export class WebSocketService {
   on = this.events.on.bind(this.events);
 
   connect(config: WebSocketServiceConfig): void {
-    if (this.client) {
-      logger.debug("Already connected, ignoring connect call");
-      return;
-    }
+    logger.debug("Connecting to server...");
 
-    this.client = this.createClient(config);
+    const client = this.ensureClient(config);
+
+    client.connect();
   }
 
   disconnect(): void {
@@ -72,6 +73,18 @@ export class WebSocketService {
     }
   }
 
+  private ensureClient(config: WebSocketServiceConfig): WebSocketClient {
+    if (this.client) {
+      return this.client;
+    }
+
+    const client = this.createClient(config);
+
+    this.client = client;
+
+    return client;
+  }
+
   private createClient(config: WebSocketServiceConfig): WebSocketClient {
     const wsUrl = `${config.url}/ws?roomId=${encodeURIComponent(config.roomId)}`;
 
@@ -80,6 +93,7 @@ export class WebSocketService {
     const client = new WebSocketClient({
       url: wsUrl,
       maxRetries: WEBSOCKET_MAX_RECONNECT_ATTEMPTS,
+      maxFirstRetries: WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS,
       baseBackoffMs: WEBSOCKET_RECONNECT_BASE_DELAY_MS,
       maxBackoffMs: WEBSOCKET_RECONNECT_MAX_DELAY_MS,
     });
@@ -96,8 +110,10 @@ export class WebSocketService {
       this.events.emit("reconnect");
     });
 
-    client.on("disconnected", (code, reason) => {
-      logger.debug(`Disconnected (code: ${code}, reason: ${reason})`);
+    client.on("disconnected", (code, reason, clean) => {
+      logger.debug(
+        `Disconnected (code: ${code}, reason: ${reason}, clean: ${clean})`,
+      );
 
       this.events.emit("disconnect");
     });
@@ -105,7 +121,7 @@ export class WebSocketService {
     client.on("closed", () => {
       logger.debug("Closed");
 
-      this.events.emit("disconnect");
+      this.events.emit("close");
     });
 
     client.on("message", (message) => {
@@ -117,8 +133,6 @@ export class WebSocketService {
 
       this.events.emit("error");
     });
-
-    client.connect();
 
     return client;
   }
