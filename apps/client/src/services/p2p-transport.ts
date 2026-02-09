@@ -43,25 +43,15 @@ export class P2PTransport {
   }
 
   private setupEventHandlers(): void {
-    this.relay.on("message", async (senderId, message) => {
-      if (
-        message.type !== "PEER_OFFER" &&
-        message.type !== "PEER_ANSWER" &&
-        message.type !== "PEER_ICE"
-      ) {
-        return;
-      }
-
-      await this.handleRelayPeerSignal(senderId, message);
+    this.relay.on("message", (senderId, message) => {
+      this.handleMessage(senderId, message);
     });
   }
 
   async initiate(clientId: ClientId): Promise<void> {
     logger.info(`Initiating with ${clientId}`);
 
-    const peer = this.ensurePeer(clientId, true);
-
-    peer.connect();
+    this.ensurePeer(clientId, true);
   }
 
   async initiateAll(clientIds: ClientId[]): Promise<void> {
@@ -133,6 +123,8 @@ export class P2PTransport {
 
     this.peers.set(clientId, peer);
 
+    peer.connect();
+
     return peer;
   }
 
@@ -190,6 +182,16 @@ export class P2PTransport {
     return peer;
   }
 
+  private handleMessage(senderId: ClientId, message: Message): void {
+    switch (message.type) {
+      case "PEER_OFFER":
+      case "PEER_ANSWER":
+      case "PEER_ICE":
+        this.handleRelayPeerSignal(senderId, message);
+        break;
+    }
+  }
+
   private async handleRelayPeerSignal(
     senderId: ClientId,
     message: PeerMessage,
@@ -208,8 +210,6 @@ export class P2PTransport {
     }
 
     const peer = this.ensurePeer(senderId, false);
-
-    peer.connect();
 
     try {
       await peer.signal(signal);
