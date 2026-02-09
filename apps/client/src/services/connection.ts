@@ -22,6 +22,7 @@ export class ConnectionService {
     this.ws.on("connect", () => this.handleConnect());
     this.ws.on("reconnect", () => this.handleReconnect());
     this.ws.on("disconnect", () => this.handleDisconnect());
+    this.ws.on("close", () => this.handleClose());
     this.ws.on("error", () => this.handleError());
     this.ws.on("message", (message) => this.handleMessage(message));
   }
@@ -52,12 +53,19 @@ export class ConnectionService {
     logger.info("Disconnected from server");
 
     this.stopPing();
-    this.ws.disconnect();
+    this.connectionStore.setStatus("disconnected");
+  }
+
+  private handleClose(): void {
+    logger.info("Connection closed");
+
     this.connectionStore.reset();
   }
 
   private handleError(): void {
-    logger.error("Server connection error");
+    logger.error("Unknown server error");
+
+    this.connectionStore.setError("Unknown server error");
   }
 
   private handleMessage(message: ServerMessage): void {
