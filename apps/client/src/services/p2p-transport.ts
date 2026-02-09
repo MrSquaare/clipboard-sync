@@ -2,6 +2,7 @@ import type { ClientId } from "@clipboard-sync/schemas";
 
 import {
   WEBRTC_DATA_CHANNEL_NAME,
+  WEBRTC_MAX_FIRST_RESTART_ATTEMPTS,
   WEBRTC_MAX_RESTART_ATTEMPTS,
   WEBRTC_RESTART_BASE_DELAY_MS,
   WEBRTC_RESTART_MAX_DELAY_MS,
@@ -56,16 +57,11 @@ export class P2PTransport {
   }
 
   async initiate(clientId: ClientId): Promise<void> {
-    const existing = this.peers.get(clientId);
+    logger.info(`Initiating with ${clientId}`);
 
-    if (existing?.status === "connected") {
-      logger.debug(`Already connected to ${clientId}, ignoring initiate call`);
-      return;
-    }
+    const peer = this.ensurePeer(clientId, true);
 
-    logger.info(`Initiating connection with ${clientId}`);
-
-    this.ensurePeer(clientId, true);
+    peer.connect();
   }
 
   async initiateAll(clientIds: ClientId[]): Promise<void> {
@@ -147,6 +143,7 @@ export class P2PTransport {
       channelLabel: WEBRTC_DATA_CHANNEL_NAME,
       ordered: true,
       maxRetries: WEBRTC_MAX_RESTART_ATTEMPTS,
+      maxFirstRetries: WEBRTC_MAX_FIRST_RESTART_ATTEMPTS,
       baseBackoffMs: WEBRTC_RESTART_BASE_DELAY_MS,
       maxBackoffMs: WEBRTC_RESTART_MAX_DELAY_MS,
     });
@@ -190,8 +187,6 @@ export class P2PTransport {
       logger.error(`Peer ${clientId} error`, error);
     });
 
-    peer.connect();
-
     return peer;
   }
 
@@ -213,6 +208,8 @@ export class P2PTransport {
     }
 
     const peer = this.ensurePeer(senderId, false);
+
+    peer.connect();
 
     try {
       await peer.signal(signal);
