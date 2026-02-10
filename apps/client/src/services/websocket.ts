@@ -50,9 +50,11 @@ export class WebSocketService {
       return;
     }
 
+    const client = this.client;
+
     logger.debug("Disconnecting from server");
 
-    this.client.close();
+    client.close();
     this.client = null;
   }
 
@@ -115,15 +117,15 @@ export class WebSocketService {
         `Disconnected (code: ${code}, reason: ${reason}, clean: ${clean})`,
       );
 
-      client.close();
       this.events.emit("disconnected");
+      client.close();
     });
 
     client.on("closed", () => {
       logger.debug("Closed");
 
-      this.client = null;
       this.events.emit("closed");
+      this.client = null;
     });
 
     client.on("message", (message) => {

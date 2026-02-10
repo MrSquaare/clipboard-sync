@@ -46,7 +46,9 @@ export class P2PTransport {
   }
 
   initiateAll(clientIds: ClientId[]): void {
-    clientIds.forEach((id) => this.initiate(id));
+    clientIds.forEach((id) => {
+      this.initiate(id);
+    });
   }
 
   disconnect(clientId: ClientId): void {
@@ -162,15 +164,15 @@ export class P2PTransport {
         `Peer ${clientId} disconnected (reason: ${reason ?? "unknown"})`,
       );
 
-      peer.close();
       this.events.emit("disconnected", clientId);
+      peer.close();
     });
 
     peer.on("closed", () => {
       logger.info(`Peer ${clientId} closed`);
 
-      this.peers.delete(clientId);
       this.events.emit("closed", clientId);
+      this.peers.delete(clientId);
     });
 
     peer.on("signal", (signal) => {
