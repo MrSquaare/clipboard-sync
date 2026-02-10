@@ -1,0 +1,27 @@
+{
+  "servers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "mantine": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hakxel/mantine-ui-server@latest"
+      ],
+      "env": {
+        "MANTINE_VERSION": "8.3.13"
+      }
+    },
+    "cloudflare-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    }
+  }
+}

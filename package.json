@@ -10,9 +10,9 @@
     "deps:update": "taze",
     "deps:upgrade": "taze -w"
   },
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@10.29.1",
   "devDependencies": {
     "taze": "^19.9.2",
-    "turbo": "^2.7.5"
+    "turbo": "^2.8.3"
   }
 }
