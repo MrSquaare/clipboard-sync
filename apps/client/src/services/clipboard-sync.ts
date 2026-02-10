@@ -20,7 +20,7 @@ export class ClipboardSyncService {
 
   on = this.events.on.bind(this.events);
 
-  send(content: string): void {
+  async send(content: string): Promise<void> {
     const message: ClipboardUpdateMessage = {
       type: "CLIPBOARD_UPDATE",
       id: crypto.randomUUID(),
@@ -28,7 +28,7 @@ export class ClipboardSyncService {
       timestamp: Date.now(),
     };
 
-    this.transport.broadcast(message);
+    await this.transport.broadcast(message);
   }
 
   reset(): void {
