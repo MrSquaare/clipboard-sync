@@ -2,6 +2,11 @@ import type { ClientName, ServerRoomID } from "@clipboard-sync/schemas";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import {
+  DEFAULT_PING_INTERVAL_MS,
+  DEFAULT_POLLING_INTERVAL_MS,
+} from "../constants";
+
 export type SettingsTransportMode = "auto" | "p2p" | "relay";
 
 export type SettingsStoreState = {
@@ -30,10 +35,10 @@ const initialState: SettingsStoreState = {
   transportMode: "auto",
   saveSecret: false,
   autoConnectOnStart: false,
-  minimizeOnClose: true,
+  minimizeOnClose: false,
   minimizeOnStart: false,
-  pingInterval: 30000,
-  pollingInterval: 1000,
+  pingInterval: DEFAULT_PING_INTERVAL_MS,
+  pollingInterval: DEFAULT_POLLING_INTERVAL_MS,
   developerMode: false,
 };
 

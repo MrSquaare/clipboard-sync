@@ -2,6 +2,7 @@ import type { ClientId } from "@clipboard-sync/schemas";
 
 import {
   WEBRTC_DATA_CHANNEL_NAME,
+  WEBRTC_DISCONNECTED_GRACE_MS,
   WEBRTC_MAX_FIRST_RESTART_ATTEMPTS,
   WEBRTC_MAX_RESTART_ATTEMPTS,
   WEBRTC_RESTART_BASE_DELAY_MS,
@@ -143,6 +144,7 @@ export class P2PTransport {
       maxFirstRetries: WEBRTC_MAX_FIRST_RESTART_ATTEMPTS,
       baseBackoffMs: WEBRTC_RESTART_BASE_DELAY_MS,
       maxBackoffMs: WEBRTC_RESTART_MAX_DELAY_MS,
+      disconnectGraceMs: WEBRTC_DISCONNECTED_GRACE_MS,
     });
 
     peer.on("connected", () => {
