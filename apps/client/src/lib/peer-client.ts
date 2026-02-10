@@ -7,7 +7,7 @@ export type PeerMessage = string;
 
 type PeerClientStateEventMap = {
   disconnected: [reason: string];
-  connecting: [];
+  connecting: [delay?: number, attempt?: number];
   connected: [];
   reconnecting: [delay: number, attempt: number];
   closed: [];
@@ -27,6 +27,7 @@ export type PeerClientOptions = {
   channelLabel?: string;
   ordered?: boolean;
   maxRetries?: number;
+  maxFirstRetries?: number;
   baseBackoffMs?: number;
   maxBackoffMs?: number;
   disconnectGraceMs?: number;
@@ -39,7 +40,8 @@ type RequiredOptions = Required<
   ordered?: boolean;
 };
 
-const DEFAULT_MAX_RETRIES = 5;
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_MAX_FIRST_RETRIES = 1;
 const DEFAULT_BASE_BACKOFF_MS = 1000;
 const DEFAULT_MAX_BACKOFF_MS = 30000;
 const DEFAULT_CHANNEL_LABEL = "peer";
@@ -67,6 +69,7 @@ export class PeerClient {
       channelLabel: options.channelLabel ?? DEFAULT_CHANNEL_LABEL,
       ordered: options.ordered,
       maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
+      maxFirstRetries: options.maxFirstRetries ?? DEFAULT_MAX_FIRST_RETRIES,
       baseBackoffMs: options.baseBackoffMs ?? DEFAULT_BASE_BACKOFF_MS,
       maxBackoffMs: options.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS,
       disconnectGraceMs:
@@ -296,7 +299,12 @@ export class PeerClient {
       return false;
     }
 
-    if (this.retryCount >= this.options.maxRetries) {
+    const maxRetries =
+      this.state === "connecting"
+        ? this.options.maxFirstRetries
+        : this.options.maxRetries;
+
+    if (this.retryCount >= maxRetries) {
       return false;
     }
 
@@ -306,7 +314,11 @@ export class PeerClient {
     );
     const attempt = this.retryCount + 1;
 
-    this.setState("reconnecting", delay, attempt);
+    if (this.state === "connecting") {
+      this.setState("connecting", delay, attempt);
+    } else {
+      this.setState("reconnecting", delay, attempt);
+    }
 
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
@@ -413,7 +425,11 @@ export class PeerClient {
     state: T,
     ...args: PeerClientEventMap[T]
   ): void {
-    if (this.state === state && state !== "reconnecting") {
+    if (
+      this.state === state &&
+      state !== "connecting" &&
+      state !== "reconnecting"
+    ) {
       return;
     }
 

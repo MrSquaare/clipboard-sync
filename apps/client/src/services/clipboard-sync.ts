@@ -2,6 +2,7 @@ import type { ClientId } from "@clipboard-sync/schemas";
 
 import { EventEmitter } from "../lib/event-emitter";
 import type { ClipboardUpdateMessage } from "../schemas/clipboard";
+import type { Message } from "../schemas/message";
 import { useClipboardStore } from "../stores/clipboard";
 
 import { Logger } from "./logger";
@@ -19,6 +20,21 @@ export class ClipboardSyncService {
 
   on = this.events.on.bind(this.events);
 
+  async send(content: string): Promise<void> {
+    const message: ClipboardUpdateMessage = {
+      type: "CLIPBOARD_UPDATE",
+      id: crypto.randomUUID(),
+      content,
+      timestamp: Date.now(),
+    };
+
+    await this.transport.broadcast(message);
+  }
+
+  reset(): void {
+    this.clipboardStore.reset();
+  }
+
   constructor(transport: TransportService) {
     this.transport = transport;
 
@@ -27,10 +43,16 @@ export class ClipboardSyncService {
 
   private setupEventHandlers(): void {
     this.transport.on("message", (senderId, message) => {
-      if (message.type !== "CLIPBOARD_UPDATE") return;
-
-      this.handleClipboardUpdate(senderId, message);
+      this.handleMessage(senderId, message);
     });
+  }
+
+  private handleMessage(senderId: string, message: Message): void {
+    switch (message.type) {
+      case "CLIPBOARD_UPDATE":
+        this.handleClipboardUpdate(senderId, message);
+        break;
+    }
   }
 
   private handleClipboardUpdate(
@@ -48,21 +70,6 @@ export class ClipboardSyncService {
 
     this.clipboardStore.setLastMessage(message);
     this.events.emit("update", message);
-  }
-
-  send(content: string): void {
-    const message: ClipboardUpdateMessage = {
-      type: "CLIPBOARD_UPDATE",
-      id: crypto.randomUUID(),
-      content,
-      timestamp: Date.now(),
-    };
-
-    this.transport.broadcast(message);
-  }
-
-  reset(): void {
-    this.clipboardStore.reset();
   }
 
   private get clipboardStore() {

@@ -20,7 +20,7 @@ export type SettingsModalProps = {
 
 export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
   const { status } = useConnectionStore();
-  const connected = status === "connected";
+  const connected = status !== "disconnected";
   const settings = useSettingsStore();
 
   const getFormInitialValues = (): SettingsFormValues => ({

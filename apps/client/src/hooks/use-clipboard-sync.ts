@@ -50,7 +50,7 @@ export const useClipboardSync = () => {
 
         lastLocal.current = content;
 
-        clipboardSyncService.send(content);
+        await clipboardSyncService.send(content);
       }
     } catch (error) {
       if (!isClipboardEmptyError(error)) {

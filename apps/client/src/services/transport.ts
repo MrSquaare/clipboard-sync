@@ -27,6 +27,32 @@ export class TransportService {
 
   on = this.events.on.bind(this.events);
 
+  initiate(clientId: ClientId): void {
+    if (this.transportMode === "relay") {
+      logger.debug("Skipping P2P connection (Relay mode)");
+      return;
+    }
+
+    this.p2p.initiate(clientId);
+  }
+
+  initiateAll(clientIds: ClientId[]): void {
+    if (this.transportMode === "relay") {
+      logger.debug("Skipping P2P connections (Relay mode)");
+      return;
+    }
+
+    this.p2p.initiateAll(clientIds);
+  }
+
+  disconnect(clientId: ClientId): void {
+    this.p2p.disconnect(clientId);
+  }
+
+  disconnectAll(): void {
+    this.p2p.disconnectAll();
+  }
+
   constructor(relay: RelayTransport, p2p: P2PTransport) {
     this.relay = relay;
     this.p2p = p2p;
@@ -97,32 +123,6 @@ export class TransportService {
 
       logger.debug(`Sent ${message.type} to ${clientId} via Relay`);
     }
-  }
-
-  initiate(clientId: ClientId): void {
-    if (this.transportMode === "relay") {
-      logger.debug("Skipping P2P connection (Relay mode)");
-      return;
-    }
-
-    this.p2p.initiate(clientId);
-  }
-
-  initiateAll(clientIds: ClientId[]): void {
-    if (this.transportMode === "relay") {
-      logger.debug("Skipping P2P connections (Relay mode)");
-      return;
-    }
-
-    this.p2p.initiateAll(clientIds);
-  }
-
-  disconnect(clientId: ClientId): void {
-    this.p2p.disconnect(clientId);
-  }
-
-  disconnectAll(): void {
-    this.p2p.disconnectAll();
   }
 
   private get clients() {
