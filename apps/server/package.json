@@ -14,23 +14,23 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "hono": "^4.12.16",
-    "zod": "^4.4.1"
+    "hono": "^4.12.18",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@clipboard-sync/eslint-config": "workspace:*",
     "@clipboard-sync/schemas": "workspace:*",
     "@cloudflare/vitest-pool-workers": "^0.16.3",
     "@eslint/js": "^9.39.4",
-    "@types/node": "^22.19.17",
+    "@types/node": "^22.19.18",
     "@vitest/coverage-istanbul": "^4.1.5",
     "eslint": "^9.39.4",
-    "globals": "^17.5.0",
-    "jiti": "^2.6.1",
+    "globals": "^17.6.0",
+    "jiti": "^2.7.0",
     "prettier": "^3.8.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.1",
+    "typescript-eslint": "^8.59.2",
     "vitest": "^4.1.5",
-    "wrangler": "^4.87.0"
+    "wrangler": "^4.90.0"
   }
 }
