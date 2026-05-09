@@ -23,9 +23,17 @@ export class Logger {
   ) {
     const timestamp = new Date().toISOString();
     const context = this.context;
-    const metaStr = meta ? JSON.stringify(meta) : "";
+    let metaStr = "";
 
-    return `[${timestamp}] [${context}] ${level.toUpperCase()}: ${message} ${metaStr}`;
+    if (meta) {
+      try {
+        metaStr = JSON.stringify(meta);
+      } catch {
+        metaStr = "[Circular or Unserializable]";
+      }
+    }
+
+    return `[${timestamp}] [${context}] ${level.toUpperCase()}: ${message}${metaStr ? ` ${metaStr}` : ""}`;
   }
 
   debug(message: string, meta?: Record<string, unknown>) {
