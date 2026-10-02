@@ -18,13 +18,13 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@clipboard-sync/eslint-config": "workspace:*",
     "eslint": "^10.11.0",
     "prettier": "^3.9.9",
     "tsdown": "^0.23.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
