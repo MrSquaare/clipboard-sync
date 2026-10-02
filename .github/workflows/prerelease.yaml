@@ -27,7 +27,7 @@ jobs:
             args: ""
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
@@ -38,7 +38,7 @@ jobs:
         run: pnpm turbo run build --filter=@clipboard-sync/client... --filter=!@clipboard-sync/client
 
       - name: Release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENV: "preview"
@@ -54,7 +54,7 @@ jobs:
   deploy-server:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
@@ -63,7 +63,7 @@ jobs:
         run: pnpm turbo run build --filter=@clipboard-sync/server... --filter=!@clipboard-sync/server
 
       - name: Deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           workingDirectory: ./apps/server
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
