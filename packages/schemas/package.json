@@ -22,9 +22,9 @@
   },
   "devDependencies": {
     "@clipboard-sync/eslint-config": "workspace:*",
-    "eslint": "^9.39.4",
-    "prettier": "^3.8.3",
-    "tsdown": "^0.20.3",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "tsdown": "^0.23.0",
     "typescript": "^5.9.3"
   }
 }

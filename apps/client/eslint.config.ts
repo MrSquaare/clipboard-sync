@@ -1,15 +1,12 @@
 import config from "@clipboard-sync/eslint-config";
-import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
-// eslint-disable-next-line import/no-named-as-default
+// eslint-disable-next-line import-x/no-named-as-default
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 
 export default [
   { ignores: ["node_modules/", "dist/", "src-tauri/", "**/*.d.ts"] },
   ...config,
-  react.configs.flat.recommended,
-  react.configs.flat["jsx-runtime"],
   reactHooks.configs.flat["recommended-latest"],
   reactRefresh.configs.recommended,
   {
@@ -18,15 +15,6 @@ export default [
         ...globals.browser,
         ...globals.node,
       },
-    },
-    settings: {
-      react: {
-        version: "detect",
-      },
-    },
-    rules: {
-      "react/jsx-curly-brace-presence": ["error", { props: "always" }],
-      "react/jsx-sort-props": ["error"],
     },
   },
 ];
