@@ -46,7 +46,7 @@ const initialState: SettingsStoreState = {
   saveSecret: false,
   serverUrl: __DEFAULT_SERVER_URL__,
   transportMode: "auto",
-  updateChannel: "release",
+  updateChannel: __DEFAULT_UPDATE_CHANNEL__,
 };
 
 export const useSettingsStore = create<
