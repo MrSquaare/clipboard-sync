@@ -18,6 +18,13 @@ export default defineConfig(async () => ({
               ? "wss://clipboard-sync-dev.mrsquaare.fr"
               : "ws://localhost:8787",
     ),
+    __DEFAULT_UPDATE_CHANNEL__: JSON.stringify(
+      process.env.DEFAULT_UPDATE_CHANNEL
+        ? process.env.DEFAULT_UPDATE_CHANNEL
+        : env === "production"
+          ? "release"
+          : "prerelease",
+    ),
     __LOG_LEVEL__: JSON.stringify(
       process.env.LOG_LEVEL
         ? process.env.LOG_LEVEL

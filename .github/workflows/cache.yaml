@@ -5,6 +5,10 @@ on:
     branches:
       - main
     paths:
+      - "apps/client/src-tauri/Cargo.lock"
+      - "apps/client/src-tauri/Cargo.toml"
+      - "apps/client/src-tauri/src/**"
+      - "apps/client/src-tauri/build.rs"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -15,9 +19,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   warm-cache:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-22.04"
     name: Warm Cache
 
     steps:
@@ -27,3 +35,11 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
+        with:
+          setup-tauri: "true"
+
+      - name: Build client
+        run: pnpm build --filter @clipboard-sync/client
+
+      - name: Check client
+        run: pnpm check --filter @clipboard-sync/client
