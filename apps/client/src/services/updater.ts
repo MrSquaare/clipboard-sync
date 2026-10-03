@@ -127,7 +127,7 @@ export class UpdaterService {
           ? error.message
           : "Failed to restart application";
 
-      logger.error("Failed to install update", error);
+      logger.error("Failed to restart application", error);
       useUpdaterStore.getState().setStatus("error");
       useUpdaterStore.getState().setError(message);
     }
