@@ -24,6 +24,7 @@ import {
   IconPingPong,
   IconPlayerPlay,
   IconRefresh,
+  IconRotate,
   IconServer,
   IconSparkles,
   IconUsers,
@@ -269,15 +270,28 @@ export const SettingsForm: FC<SettingsFormProps> = ({
           />
 
           <Group justify={"space-between"}>
-            <Button
-              leftSection={<IconRefresh size={16} />}
-              loading={updater.status === "checking"}
-              onClick={() => updaterService.check(true)}
-              size={"xs"}
-              variant={"light"}
-            >
-              Check for updates
-            </Button>
+            {updater.status === "ready" ? (
+              <Button
+                color={"teal"}
+                leftSection={<IconRotate size={16} />}
+                onClick={() => updaterService.restart()}
+                size={"xs"}
+                variant={"light"}
+              >
+                Restart to update
+              </Button>
+            ) : (
+              <Button
+                disabled={updater.status === "downloading"}
+                leftSection={<IconRefresh size={16} />}
+                loading={updater.status === "checking"}
+                onClick={() => updaterService.check(true)}
+                size={"xs"}
+                variant={"light"}
+              >
+                Check for updates
+              </Button>
+            )}
 
             {updater.status === "up-to-date" && (
               <Text c={"teal"} size={"xs"}>
@@ -288,6 +302,18 @@ export const SettingsForm: FC<SettingsFormProps> = ({
             {updater.status === "available" && (
               <Text c={"blue"} size={"xs"}>
                 Update v{updater.update?.version} is available!
+              </Text>
+            )}
+
+            {updater.status === "downloading" && (
+              <Text c={"blue"} size={"xs"}>
+                Downloading update...
+              </Text>
+            )}
+
+            {updater.status === "ready" && (
+              <Text c={"teal"} size={"xs"}>
+                Update ready.
               </Text>
             )}
 
