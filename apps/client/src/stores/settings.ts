@@ -1,5 +1,6 @@
 import type { ClientName } from "@clipboard-sync/shared/schemas/client";
 import type { ServerRoomID } from "@clipboard-sync/shared/schemas/server";
+import type { UpdateServerChannel } from "@clipboard-sync/shared/schemas/update-server";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -22,6 +23,8 @@ export type SettingsStoreState = {
   pingInterval: number;
   pollingInterval: number;
   developerMode: boolean;
+  updateChannel: UpdateServerChannel;
+  notifyOnUpdate: boolean;
 };
 
 export type SettingsStoreActions = {
@@ -41,6 +44,8 @@ const initialState: SettingsStoreState = {
   pingInterval: DEFAULT_PING_INTERVAL_MS,
   pollingInterval: DEFAULT_POLLING_INTERVAL_MS,
   developerMode: false,
+  updateChannel: "release",
+  notifyOnUpdate: true,
 };
 
 export const useSettingsStore = create<

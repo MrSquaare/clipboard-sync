@@ -17,6 +17,8 @@
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "autostart:default",
-    "log:default"
+    "log:default",
+    "updater:default",
+    "process:default"
   ]
 }

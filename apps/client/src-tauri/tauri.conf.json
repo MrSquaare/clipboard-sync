@@ -23,7 +23,7 @@
     "security": {
       "csp": {
         "default-src": "'self'",
-        "connect-src": "'self' ipc://localhost ws: wss:",
+        "connect-src": "'self' ipc://localhost ws: wss: https:",
         "img-src": "'self' asset: https://asset.localhost data:",
         "style-src": "'self' 'unsafe-inline'"
       }
@@ -31,6 +31,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["deb", "rpm", "appimage", "nsis", "app", "dmg"],
     "icon": [
       "icons/32x32.png",
@@ -39,5 +40,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxNkU0Mzg4Rjc3Qzc3RDUKUldUVmQzejNpRU51c1V6YlV6WEg2MDA1Q0tjYytWQzJ2VFV4S2NHaVFCTlFkZUozOERUVzY2UHMK"
+    }
   }
 }

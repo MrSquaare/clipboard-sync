@@ -74,6 +74,19 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+
+    if let Some(update_server_url) = option_env!("UPDATE_SERVER_URL") {
+        if let Some(updater_config) = context.config_mut().plugins.0.get_mut("updater") {
+            if let Some(obj) = updater_config.as_object_mut() {
+                obj.insert(
+                    "endpoints".to_string(),
+                    serde_json::json!([update_server_url]),
+                );
+            }
+        }
+    }
+
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -90,6 +103,8 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -121,6 +136,6 @@ pub fn run() {
                 let _ = window.emit("close-requested", ());
             }
         })
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("failed to run app");
 }

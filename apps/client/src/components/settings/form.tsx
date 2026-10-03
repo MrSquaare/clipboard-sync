@@ -7,6 +7,7 @@ import {
   Group,
   NumberInput,
   SegmentedControl,
+  Select,
   Stack,
   Switch,
   Text,
@@ -18,10 +19,13 @@ import {
   IconClipboard,
   IconCloudDataConnection,
   IconCode,
+  IconBell,
   IconGizmo,
   IconPingPong,
   IconPlayerPlay,
+  IconRefresh,
   IconServer,
+  IconSparkles,
   IconUsers,
   IconWindowMinimize,
   IconX,
@@ -29,6 +33,8 @@ import {
 import type { FC } from "react";
 
 import type { SettingsFormValues } from "../../schemas/settings-form";
+import { updaterService } from "../../services/updater";
+import { useUpdaterStore } from "../../stores/updater";
 
 export type SettingsFormProps = {
   form: UseFormReturnType<SettingsFormValues>;
@@ -45,6 +51,8 @@ export const SettingsForm: FC<SettingsFormProps> = ({
   onResetServerURL,
   connected,
 }) => {
+  const updater = useUpdaterStore();
+
   return (
     <form onSubmit={form.onSubmit(onSubmit)}>
       <Stack gap={"md"}>
@@ -222,6 +230,73 @@ export const SettingsForm: FC<SettingsFormProps> = ({
             }}
             {...form.getInputProps("developerMode", { type: "checkbox" })}
           />
+        </Stack>
+
+        <Divider />
+
+        <Stack gap={"md"}>
+          <Text fw={600}>Updates</Text>
+
+          <Select
+            data={[
+              { label: "Release (Stable)", value: "release" },
+              { label: "Prerelease (Preview)", value: "prerelease" },
+            ]}
+            description={"Which channel to receive updates from"}
+            label={"Channel"}
+            leftSection={<IconSparkles size={16} />}
+            {...form.getInputProps("updateChannel")}
+          />
+
+          <Switch
+            label={
+              <Group>
+                <IconBell size={16} />
+                <Box>
+                  <Text size={"sm"}>Notify on new updates</Text>
+                  <Text c={"dimmed"} size={"xs"}>
+                    Inform when a new version of the app is available
+                  </Text>
+                </Box>
+              </Group>
+            }
+            styles={{
+              track: {
+                margin: "auto 0",
+              },
+            }}
+            {...form.getInputProps("notifyOnUpdate", { type: "checkbox" })}
+          />
+
+          <Group justify={"space-between"}>
+            <Button
+              leftSection={<IconRefresh size={16} />}
+              loading={updater.status === "checking"}
+              onClick={() => updaterService.check(true)}
+              size={"xs"}
+              variant={"light"}
+            >
+              Check for updates
+            </Button>
+
+            {updater.status === "up-to-date" && (
+              <Text c={"teal"} size={"xs"}>
+                You are on the latest version.
+              </Text>
+            )}
+
+            {updater.status === "available" && (
+              <Text c={"blue"} size={"xs"}>
+                Update v{updater.update?.version} is available!
+              </Text>
+            )}
+
+            {updater.status === "error" && (
+              <Text c={"red"} size={"xs"}>
+                {updater.error}
+              </Text>
+            )}
+          </Group>
         </Stack>
 
         <Group justify={"flex-end"}>

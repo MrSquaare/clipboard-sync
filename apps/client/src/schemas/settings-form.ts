@@ -1,3 +1,4 @@
+import { UpdateServerChannelSchema } from "@clipboard-sync/shared/schemas/update-server";
 import { z } from "zod";
 
 export const SettingsFormSchema = z.object({
@@ -16,6 +17,8 @@ export const SettingsFormSchema = z.object({
   minimizeOnClose: z.boolean(),
   minimizeOnStart: z.boolean(),
   developerMode: z.boolean(),
+  updateChannel: UpdateServerChannelSchema,
+  notifyOnUpdate: z.boolean(),
 });
 
 export type SettingsFormValues = z.infer<typeof SettingsFormSchema>;

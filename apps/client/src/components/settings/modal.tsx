@@ -32,6 +32,8 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
     minimizeOnStart: settings.minimizeOnStart,
     minimizeOnClose: settings.minimizeOnClose,
     developerMode: settings.developerMode,
+    updateChannel: settings.updateChannel,
+    notifyOnUpdate: settings.notifyOnUpdate,
   });
 
   const form = useForm<SettingsFormValues>({
@@ -70,6 +72,8 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
       minimizeOnStart: values.minimizeOnStart,
       minimizeOnClose: values.minimizeOnClose,
       developerMode: values.developerMode,
+      updateChannel: values.updateChannel,
+      notifyOnUpdate: values.notifyOnUpdate,
     });
 
     if (values.launchOnStart) {
