@@ -3,7 +3,7 @@
   "name": "@clipboard-sync/update-server",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --ip 0.0.0.0",
+    "dev": "wrangler dev --ip 0.0.0.0 --port 8788",
     "build": "rm -rf dist && tsc",
     "deploy": "wrangler deploy --minify --env=''",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
