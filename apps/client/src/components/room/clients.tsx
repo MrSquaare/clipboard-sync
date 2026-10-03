@@ -1,3 +1,5 @@
+import type { FC } from "react";
+
 import {
   Badge,
   Card,
@@ -8,9 +10,8 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { IconDevices, IconUser } from "@tabler/icons-react";
-import type { FC } from "react";
 
-import { useClientsStore, type Client } from "../../stores/clients";
+import { type Client, useClientsStore } from "../../stores/clients";
 
 type ClientRowProps = {
   client: Client;

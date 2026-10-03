@@ -13,7 +13,7 @@ jobs:
   client-checks:
     runs-on: "ubuntu-22.04"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
@@ -23,13 +23,13 @@ jobs:
       - name: Build
         run: pnpm build --filter @clipboard-sync/client
 
-      - name: Lint
-        run: pnpm lint --filter @clipboard-sync/client
+      - name: Check
+        run: pnpm check --filter @clipboard-sync/client
 
   server-checks:
     runs-on: "ubuntu-22.04"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup environment
         uses: ./.github/actions/setup-env
@@ -37,5 +37,19 @@ jobs:
       - name: Build
         run: pnpm build --filter @clipboard-sync/server
 
-      - name: Lint
-        run: pnpm lint --filter @clipboard-sync/server
+      - name: Check
+        run: pnpm check --filter @clipboard-sync/server
+
+  update-server-checks:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build
+        run: pnpm build --filter @clipboard-sync/update-server
+
+      - name: Check
+        run: pnpm check --filter @clipboard-sync/update-server

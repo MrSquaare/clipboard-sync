@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const ClipboardUpdateMessageSchema = z.object({
-  type: z.literal("CLIPBOARD_UPDATE"),
+  content: z.string(),
   id: z.uuidv4(),
   timestamp: z.number(),
-  content: z.string(),
+  type: z.literal("CLIPBOARD_UPDATE"),
 });
 
 export type ClipboardUpdateMessage = z.infer<

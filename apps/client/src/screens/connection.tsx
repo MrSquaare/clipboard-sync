@@ -30,17 +30,17 @@ import { useSettingsStore } from "../stores/settings";
 export const ConnectionScreen: FC = () => {
   const connection = useConnectionStore();
   const settings = useSettingsStore();
-  const [settingsOpened, { open: openSettings, close: closeSettings }] =
+  const [settingsOpened, { close: closeSettings, open: openSettings }] =
     useDisclosure(false);
   const { connect } = useConnection();
 
   const form = useForm<ConnectionFormValues>({
     initialValues: {
+      autoConnectOnStart: settings.autoConnectOnStart,
       clientName: settings.clientName,
       roomId: settings.roomId,
-      secret: "",
       saveSecret: settings.saveSecret,
-      autoConnectOnStart: settings.autoConnectOnStart,
+      secret: "",
     },
     validate: zod4Resolver(ConnectionFormSchema),
   });
@@ -75,15 +75,15 @@ export const ConnectionScreen: FC = () => {
     connection.setStatus("connecting");
 
     settings.update({
+      autoConnectOnStart: values.autoConnectOnStart,
       clientName: values.clientName,
       roomId: values.roomId,
       saveSecret: values.saveSecret,
-      autoConnectOnStart: values.autoConnectOnStart,
     });
 
     await connect({
-      secret: values.secret,
       saveSecret: values.saveSecret,
+      secret: values.secret,
     });
   };
 

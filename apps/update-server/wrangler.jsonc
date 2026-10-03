@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clipboard-sync-update-server",
+  "compatibility_date": "2026-02-03",
+  "main": "./src/index.ts",
+  "route": "update-clipboard-sync-dev.mrsquaare.fr/*",
+  "vars": {
+    "LOG_LEVEL": "debug",
+    "GITHUB_OWNER": "MrSquaare",
+    "GITHUB_REPO": "clipboard-sync",
+  },
+  "env": {
+    "preview": {
+      "route": "update-clipboard-sync-preview.mrsquaare.fr/*",
+      "vars": {
+        "LOG_LEVEL": "debug",
+        "GITHUB_OWNER": "MrSquaare",
+        "GITHUB_REPO": "clipboard-sync",
+      },
+    },
+    "production": {
+      "route": "update-clipboard-sync.mrsquaare.fr/*",
+      "vars": {
+        "LOG_LEVEL": "error",
+        "GITHUB_OWNER": "MrSquaare",
+        "GITHUB_REPO": "clipboard-sync",
+      },
+    },
+  },
+  "observability": {
+    "enabled": true,
+  },
+}

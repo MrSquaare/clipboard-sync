@@ -1,7 +1,9 @@
-import type { ClientId, ClientName } from "@clipboard-sync/schemas";
-import { create } from "zustand";
+import type {
+  ClientId,
+  ClientName,
+} from "@clipboard-sync/shared/schemas/client";
 
-export type ClientTransportMode = "p2p" | "relay";
+import { create } from "zustand";
 
 export type Client = {
   id: ClientId;
@@ -14,13 +16,15 @@ export type ClientsStoreState = {
 };
 
 export type ClientStoreActions = {
-  getById(clientId: ClientId): Client | undefined;
   add(client: Client): void;
-  update(clientId: ClientId, client: Partial<Client>): void;
+  getById(clientId: ClientId): Client | undefined;
   remove(clientId: ClientId): void;
-  set(clients: Client[]): void;
   reset: () => void;
+  set(clients: Client[]): void;
+  update(clientId: ClientId, client: Partial<Client>): void;
 };
+
+export type ClientTransportMode = "p2p" | "relay";
 
 const initialState: ClientsStoreState = {
   list: [],
@@ -30,22 +34,14 @@ export const useClientsStore = create<ClientsStoreState & ClientStoreActions>(
   (set, get) => ({
     ...initialState,
 
-    getById: (clientId) => {
-      return get().list.find((client) => client.id === clientId);
-    },
-
     add: (client) => {
       set((state) => ({
         list: [...state.list, client],
       }));
     },
 
-    update: (clientId, updates) => {
-      set((state) => ({
-        list: state.list.map((client) =>
-          client.id === clientId ? { ...client, ...updates } : client,
-        ),
-      }));
+    getById: (clientId) => {
+      return get().list.find((client) => client.id === clientId);
     },
 
     remove: (clientId) => {
@@ -54,8 +50,16 @@ export const useClientsStore = create<ClientsStoreState & ClientStoreActions>(
       }));
     },
 
+    reset: () => set(initialState),
+
     set: (clients) => set({ list: clients }),
 
-    reset: () => set(initialState),
+    update: (clientId, updates) => {
+      set((state) => ({
+        list: state.list.map((client) =>
+          client.id === clientId ? { ...client, ...updates } : client,
+        ),
+      }));
+    },
   }),
 );

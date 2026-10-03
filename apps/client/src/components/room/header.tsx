@@ -1,6 +1,7 @@
+import type { FC } from "react";
+
 import { Button, Group, Paper, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconLogout, IconPlugConnected, IconUser } from "@tabler/icons-react";
-import type { FC } from "react";
 
 import { useSettingsStore } from "../../stores/settings";
 
@@ -9,7 +10,7 @@ export type RoomHeaderProps = {
 };
 
 export const RoomHeader: FC<RoomHeaderProps> = ({ onDisconnect }) => {
-  const { roomId, clientName } = useSettingsStore();
+  const { clientName, roomId } = useSettingsStore();
 
   return (
     <Paper mb={"lg"} p={"md"} radius={"md"} shadow={"xs"} withBorder>

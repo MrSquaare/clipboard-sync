@@ -1,18 +1,24 @@
 {
   "private": true,
   "name": "clipboard-sync",
+  "type": "module",
   "scripts": {
+    "root:check": "eslint . && prettier . --check",
+    "root:check:fix": "eslint . --fix && prettier . --write",
     "dev": "turbo dev --continue",
     "build": "turbo build",
-    "lint": "turbo lint --continue",
-    "lint:fix": "turbo lint:fix --continue",
+    "check": "turbo check --continue",
+    "check:fix": "turbo check:fix --continue",
     "clean": "turbo clean --continue && rm -rf node_modules/.cache/ .turbo/ **/*/.turbo/",
     "deps:update": "taze",
     "deps:upgrade": "taze -w"
   },
-  "packageManager": "pnpm@10.29.1",
+  "packageManager": "pnpm@12.8.1",
   "devDependencies": {
-    "taze": "^19.9.2",
-    "turbo": "^2.8.3"
+    "@clipboard-sync/shared-config": "workspace:*",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "taze": "^21.3.0",
+    "turbo": "^2.11.7"
   }
 }

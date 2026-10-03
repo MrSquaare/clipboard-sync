@@ -6,7 +6,6 @@ import { clipboardSyncService } from "../services/clipboard-sync";
 import { Logger } from "../services/logger";
 import { useConnectionStore } from "../stores/connection";
 import { useSettingsStore } from "../stores/settings";
-
 import { useOneTimeEffect } from "./use-one-time-effect";
 
 const logger = new Logger("ClipboardSync");
@@ -14,7 +13,7 @@ const logger = new Logger("ClipboardSync");
 export const useClipboardSync = () => {
   const { status } = useConnectionStore();
   const { pollingInterval } = useSettingsStore();
-  const lastLocal = useRef<string | null>(null);
+  const lastLocal = useRef<null | string>(null);
   const writing = useRef(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -40,6 +39,7 @@ export const useClipboardSync = () => {
     try {
       if (writing.current) {
         logger.debug("Skipping clipboard poll while writing content");
+
         return;
       }
 

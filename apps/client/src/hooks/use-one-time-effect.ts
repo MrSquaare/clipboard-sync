@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export const useOneTimeEffect = (effect: () => void | (() => void)): void => {
+export const useOneTimeEffect = (effect: () => (() => void) | void): void => {
   const effectRef = useRef(effect);
   const hasRunRef = useRef(false);
 

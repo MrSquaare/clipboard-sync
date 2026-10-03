@@ -4,7 +4,6 @@ import { Logger } from "../services/logger";
 import { secretService } from "../services/secret";
 import { useConnectionStore } from "../stores/connection";
 import { useSettingsStore } from "../stores/settings";
-
 import { useConnection } from "./use-connection";
 import { useOneTimeEffect } from "./use-one-time-effect";
 
@@ -23,10 +22,11 @@ export function useAutoConnect(): void {
 
       if (!secret) {
         logger.debug("Skipped: no saved secret found");
+
         return;
       }
 
-      await connect({ secret, saveSecret: false });
+      await connect({ saveSecret: false, secret });
     } catch (error) {
       logger.error("Failed", error);
     }

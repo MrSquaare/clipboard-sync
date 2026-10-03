@@ -1,28 +1,15 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+
+use crate::window::{focus_main_window, hide_main_window};
 
 #[tauri::command]
-pub async fn show_window(app: AppHandle) -> Result<(), String> {
-    let window = app
-        .get_webview_window("main")
-        .ok_or("Main window not found")?;
-
-    window.unminimize().map_err(|e| e.to_string())?;
-    window.show().map_err(|e| e.to_string())?;
-    window.set_focus().map_err(|e| e.to_string())?;
-
-    Ok(())
+pub fn show_window(app: AppHandle) {
+    focus_main_window(&app);
 }
 
 #[tauri::command]
-pub async fn minimize_window(app: AppHandle) -> Result<(), String> {
-    let window = app
-        .get_webview_window("main")
-        .ok_or("Main window not found")?;
-
-    window.minimize().map_err(|e| e.to_string())?;
-    window.hide().map_err(|e| e.to_string())?;
-
-    Ok(())
+pub fn minimize_window(app: AppHandle) {
+    hide_main_window(&app);
 }
 
 #[tauri::command]

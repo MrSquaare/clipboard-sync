@@ -1,3 +1,5 @@
+import type { FC } from "react";
+
 import {
   Button,
   Card,
@@ -8,21 +10,21 @@ import {
   Text,
 } from "@mantine/core";
 import { IconBug } from "@tabler/icons-react";
-import type { FC } from "react";
 
 import type { LogLevel } from "../../services/logger";
-import { useLogsStore, type LogEntry } from "../../stores/logs";
+
+import { type LogEntry, useLogsStore } from "../../stores/logs";
 
 const getLevelColor = (level: LogLevel) => {
   switch (level) {
     case "debug":
       return "dark.1";
+    case "error":
+      return "red.4";
     case "info":
       return "blue.4";
     case "warn":
       return "yellow.4";
-    case "error":
-      return "red.4";
   }
 };
 
@@ -32,8 +34,8 @@ type RoomLogProps = {
 
 const RoomLogRow: FC<RoomLogProps> = ({ entry }) => {
   const time = new Date(entry.timestamp).toLocaleTimeString([], {
-    hour12: false,
     hour: "2-digit",
+    hour12: false,
     minute: "2-digit",
     second: "2-digit",
   });
@@ -51,8 +53,8 @@ const RoomLogRow: FC<RoomLogProps> = ({ entry }) => {
           ff={"monospace"}
           size={"xs"}
           style={{
-            wordBreak: "break-word",
             whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
           }}
         >
           {entry.message}
