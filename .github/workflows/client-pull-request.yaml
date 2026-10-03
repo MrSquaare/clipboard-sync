@@ -1,0 +1,44 @@
+name: "@clipboard-sync/client Pull Request"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/client/**"
+      - "packages/shared/**"
+      - "packages/shared-config/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/actions/setup-env/**"
+      - ".github/workflows/client-pull-request.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: "ubuntu-22.04"
+    name: Checks
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+        with:
+          setup-tauri: "true"
+
+      - name: Build
+        run: pnpm build --filter @clipboard-sync/client
+
+      - name: Check
+        run: pnpm check --filter @clipboard-sync/client
