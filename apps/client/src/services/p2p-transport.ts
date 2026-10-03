@@ -1,4 +1,4 @@
-import type { ClientId } from "@clipboard-sync/schemas";
+import type { ClientId } from "@clipboard-sync/shared/schemas/client";
 
 import {
   WEBRTC_DATA_CHANNEL_NAME,

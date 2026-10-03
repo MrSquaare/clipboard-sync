@@ -1,4 +1,5 @@
-import { ClientNameSchema, ServerRoomIDSchema } from "@clipboard-sync/schemas";
+import { ClientNameSchema } from "@clipboard-sync/shared/schemas/client";
+import { ServerRoomIDSchema } from "@clipboard-sync/shared/schemas/server";
 import { z } from "zod";
 
 export const ConnectionFormSchema = z.object({

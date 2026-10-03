@@ -1,10 +1,10 @@
+import type { ClientId } from "@clipboard-sync/shared/schemas/client";
 import type {
-  ClientId,
   ServerClientJoinedMessage,
   ServerClientLeftMessage,
   ServerHelloMessage,
   ServerMessage,
-} from "@clipboard-sync/schemas";
+} from "@clipboard-sync/shared/schemas/server";
 
 import {
   useClientsStore,

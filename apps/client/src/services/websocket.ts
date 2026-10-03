@@ -1,9 +1,9 @@
-import type {
-  ClientMessage,
-  ServerMessage,
-  ServerRoomID,
-} from "@clipboard-sync/schemas";
-import { ServerMessageSchema } from "@clipboard-sync/schemas";
+import type { ClientMessage } from "@clipboard-sync/shared/schemas/client";
+import {
+  ServerMessageSchema,
+  type ServerMessage,
+  type ServerRoomID,
+} from "@clipboard-sync/shared/schemas/server";
 
 import {
   WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS,

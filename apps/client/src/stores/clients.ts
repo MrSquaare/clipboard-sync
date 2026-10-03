@@ -1,4 +1,7 @@
-import type { ClientId, ClientName } from "@clipboard-sync/schemas";
+import type {
+  ClientId,
+  ClientName,
+} from "@clipboard-sync/shared/schemas/client";
 import { create } from "zustand";
 
 export type ClientTransportMode = "p2p" | "relay";

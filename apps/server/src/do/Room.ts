@@ -1,17 +1,16 @@
-import {
-  type ClientInfo,
-  type ClientEncryptedPayload,
-  type ClientHelloMessage,
-  type ClientId,
-  ClientMessageSchema,
-  type ClientName,
-  type ServerMessage,
-  ServerRoomIDSchema,
+import type {
+  ClientInfo,
+  ClientEncryptedPayload,
+  ClientHelloMessage,
+  ClientId,
+  ClientName,
   ClientMessage,
-} from "@clipboard-sync/schemas";
+} from "@clipboard-sync/shared/schemas/client";
+import { ClientMessageSchema } from "@clipboard-sync/shared/schemas/client";
+import type { ServerMessage } from "@clipboard-sync/shared/schemas/server";
+import { ServerRoomIDSchema } from "@clipboard-sync/shared/schemas/server";
+import { Logger } from "@clipboard-sync/shared/utils/logger";
 import { DurableObject } from "cloudflare:workers";
-
-import { Logger } from "../utils/logger";
 
 type ClientSessionAttachment = {
   id: ClientId;

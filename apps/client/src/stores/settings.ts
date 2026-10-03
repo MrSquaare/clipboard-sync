@@ -1,4 +1,5 @@
-import type { ClientName, ServerRoomID } from "@clipboard-sync/schemas";
+import type { ClientName } from "@clipboard-sync/shared/schemas/client";
+import type { ServerRoomID } from "@clipboard-sync/shared/schemas/server";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

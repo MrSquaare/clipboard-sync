@@ -1,7 +1,7 @@
 import type {
   ServerHelloMessage,
   ServerMessage,
-} from "@clipboard-sync/schemas";
+} from "@clipboard-sync/shared/schemas/server";
 
 import { useConnectionStore } from "../stores/connection";
 import { useSettingsStore } from "../stores/settings";

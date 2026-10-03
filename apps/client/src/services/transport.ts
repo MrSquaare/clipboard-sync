@@ -1,4 +1,4 @@
-import type { ClientId } from "@clipboard-sync/schemas";
+import type { ClientId } from "@clipboard-sync/shared/schemas/client";
 
 import { EventEmitter } from "../lib/event-emitter";
 import type { Message } from "../schemas/message";

@@ -1,4 +1,4 @@
-import type { ClientEncryptedPayload } from "@clipboard-sync/schemas";
+import type { ClientEncryptedPayload } from "@clipboard-sync/shared/schemas/client";
 import { invoke } from "@tauri-apps/api/core";
 
 export class CryptoService {

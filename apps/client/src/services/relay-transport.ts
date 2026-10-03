@@ -1,9 +1,9 @@
+import type { ClientId } from "@clipboard-sync/shared/schemas/client";
 import type {
-  ClientId,
   ServerMessage,
   ServerRelayBroadcastMessage,
   ServerRelaySendMessage,
-} from "@clipboard-sync/schemas";
+} from "@clipboard-sync/shared/schemas/server";
 
 import { EventEmitter } from "../lib/event-emitter";
 import { MessageSchema, type Message } from "../schemas/message";
