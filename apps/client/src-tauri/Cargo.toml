@@ -1,6 +1,6 @@
 [package]
 name = "clipboard-sync-client"
-version = "0.2.1-pre.1"
+version = "0.2.1-pre.2"
 authors = ["MrSquaare <contact@mrsquaare.fr>"]
 edition = "2021"
 
