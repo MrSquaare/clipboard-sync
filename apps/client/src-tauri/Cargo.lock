@@ -604,7 +604,7 @@ dependencies = [
 
 [[package]]
 name = "clipboard-sync-client"
-version = "0.2.0-pre.1"
+version = "0.2.1-pre.1"
 dependencies = [
  "aes-gcm",
  "argon2",
