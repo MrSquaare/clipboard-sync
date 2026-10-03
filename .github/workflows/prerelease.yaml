@@ -69,3 +69,22 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: deploy --env preview
+
+  deploy-update-server:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+
+      - name: Build
+        run: pnpm turbo run build --filter=@clipboard-sync/update-server... --filter=!@clipboard-sync/update-server
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          workingDirectory: ./apps/update-server
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy --env preview

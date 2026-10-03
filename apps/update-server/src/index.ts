@@ -1,14 +1,10 @@
 import { Hono } from "hono";
 import { logger as httpLogger } from "hono/logger";
 
-import { Room } from "./do/Room";
-import { wsApp } from "./routes/ws";
-
-export { Room };
+import { updateApp } from "./routes/update";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use("*", httpLogger())
-  .get("/", (c) => c.text("Clipboard Sync Signaling and Relay Server"))
-  .route("/ws", wsApp);
+  .route("/", updateApp);
 
 export default app;

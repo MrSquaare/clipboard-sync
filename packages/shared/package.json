@@ -6,6 +6,7 @@
     "./hono/middleware/logger": "./dist/hono/middleware/logger.mjs",
     "./schemas/client": "./dist/schemas/client.mjs",
     "./schemas/server": "./dist/schemas/server.mjs",
+    "./schemas/update-server": "./dist/schemas/update-server.mjs",
     "./utils/logger": "./dist/utils/logger.mjs",
     "./package.json": "./package.json"
   },
