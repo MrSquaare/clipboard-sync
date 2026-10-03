@@ -23,9 +23,9 @@ Messages sent through the Relay server are end-to-end encrypted using the follow
 
 ```typescript
 {
-  iv: string;         // Base64-encoded nonce (12 bytes)
+  iv: string; // Base64-encoded nonce (12 bytes)
   ciphertext: string; // Base64-encoded encrypted data
-  salt: string;       // Base64-encoded salt (16 bytes)
+  salt: string; // Base64-encoded salt (16 bytes)
 }
 ```
 
@@ -58,20 +58,20 @@ sequenceDiagram
 
     Client A->>Server: WebSocket Connect (roomId)
     Server-->>Client A: WebSocket Accepted
-    
+
     Client A->>Server: HELLO (clientName)
     Server-->>Client A: WELCOME (clientId, clients: [])
-    
+
     Client B->>Server: WebSocket Connect (roomId)
     Server-->>Client B: WebSocket Accepted
-    
+
     Client B->>Server: HELLO (clientName)
     Server-->>Client B: WELCOME (clientId, clients: [Client A])
     Server-->>Client A: CLIENT_JOINED (Client B)
-    
+
     Client A->>Server: PING
     Server-->>Client A: PONG
-    
+
     Client B->>Server: LEAVE
     Server-->>Client B: WebSocket Close
     Server-->>Client A: CLIENT_LEFT (Client B)
@@ -80,6 +80,7 @@ sequenceDiagram
 ### Client → Server Messages
 
 #### HELLO
+
 Initial handshake message. Must be sent before any other messages.
 
 ```typescript
@@ -93,24 +94,27 @@ Initial handshake message. Must be sent before any other messages.
 ```
 
 #### PING
+
 Heartbeat to keep connection alive.
 
 ```typescript
 {
-  type: "PING"
+  type: "PING";
 }
 ```
 
 #### LEAVE
+
 Graceful disconnect notification.
 
 ```typescript
 {
-  type: "LEAVE"
+  type: "LEAVE";
 }
 ```
 
 #### RELAY_BROADCAST
+
 Broadcasts encrypted payload to all clients in room (except sender).
 
 ```typescript
@@ -121,6 +125,7 @@ Broadcasts encrypted payload to all clients in room (except sender).
 ```
 
 #### RELAY_SEND
+
 Sends encrypted payload to specific client.
 
 ```typescript
@@ -134,6 +139,7 @@ Sends encrypted payload to specific client.
 ### Server → Client Messages
 
 #### WELCOME
+
 Response to `HELLO`, provides client identity and room state.
 
 ```typescript
@@ -150,15 +156,17 @@ Response to `HELLO`, provides client identity and room state.
 ```
 
 #### PONG
+
 Heartbeat response.
 
 ```typescript
 {
-  type: "PONG"
+  type: "PONG";
 }
 ```
 
 #### CLIENT_JOINED
+
 Notification when new client joins room.
 
 ```typescript
@@ -172,6 +180,7 @@ Notification when new client joins room.
 ```
 
 #### CLIENT_LEFT
+
 Notification when client leaves room.
 
 ```typescript
@@ -185,6 +194,7 @@ Notification when client leaves room.
 ```
 
 #### RELAY_BROADCAST
+
 Forwarded broadcast message from another client.
 
 ```typescript
@@ -196,6 +206,7 @@ Forwarded broadcast message from another client.
 ```
 
 #### RELAY_SEND
+
 Forwarded targeted message from another client.
 
 ```typescript
@@ -207,6 +218,7 @@ Forwarded targeted message from another client.
 ```
 
 #### ERROR
+
 Error notification from server.
 
 ```typescript
@@ -234,36 +246,37 @@ sequenceDiagram
     participant Client B
 
     Note over Client A,Client B: After both clients receive CLIENT_JOINED/WELCOME
-    
+
     Client A->>Client A: Create RTCPeerConnection
     Client A->>Client A: Create Offer
     Client A->>Server (Relay): RELAY_SEND (PEER_OFFER encrypted)
     Server (Relay)-->>Client B: RELAY_SEND (PEER_OFFER encrypted)
-    
+
     Client B->>Client B: Decrypt PEER_OFFER
     Client B->>Client B: Create RTCPeerConnection
     Client B->>Client B: Set Remote Description
     Client B->>Client B: Create Answer
     Client B->>Server (Relay): RELAY_SEND (PEER_ANSWER encrypted)
     Server (Relay)-->>Client A: RELAY_SEND (PEER_ANSWER encrypted)
-    
+
     Client A->>Client A: Decrypt PEER_ANSWER
     Client A->>Client A: Set Remote Description
-    
+
     Client A->>Server (Relay): RELAY_SEND (PEER_ICE encrypted)
     Server (Relay)-->>Client B: RELAY_SEND (PEER_ICE encrypted)
-    
+
     Client B->>Server (Relay): RELAY_SEND (PEER_ICE encrypted)
     Server (Relay)-->>Client A: RELAY_SEND (PEER_ICE encrypted)
-    
+
     Note over Client A,Client B: ICE candidates exchanged, WebRTC connects
-    
+
     Client A->>Client B: Direct P2P Data Channel established
 ```
 
 ### Message Types
 
 #### CLIPBOARD_UPDATE
+
 Synchronizes clipboard content.
 
 ```typescript
@@ -278,6 +291,7 @@ Synchronizes clipboard content.
 **Transport**: Sent via P2P (WebRTC encryption) or Relay (application-level encryption)
 
 #### PEER_OFFER
+
 WebRTC connection offer for P2P negotiation.
 
 ```typescript
@@ -293,6 +307,7 @@ WebRTC connection offer for P2P negotiation.
 **Transport**: Sent via `RELAY_SEND` (application-level encryption)
 
 #### PEER_ANSWER
+
 WebRTC connection answer for P2P negotiation.
 
 ```typescript
@@ -308,6 +323,7 @@ WebRTC connection answer for P2P negotiation.
 **Transport**: Sent via `RELAY_SEND` (application-level encryption)
 
 #### PEER_ICE
+
 WebRTC ICE candidate exchange.
 
 ```typescript

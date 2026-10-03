@@ -5,23 +5,7 @@ const host = process.env.TAURI_DEV_HOST;
 const env = process.env.ENV;
 
 export default defineConfig(async () => ({
-  plugins: [react()],
   clearScreen: false,
-  server: {
-    port: 1420,
-    strictPort: true,
-    host: host || false,
-    hmr: host
-      ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
-      : undefined,
-    watch: {
-      ignored: ["**/src-tauri/**"],
-    },
-  },
   define: {
     __DEFAULT_SERVER_URL__: JSON.stringify(
       process.env.DEFAULT_SERVER_URL
@@ -45,5 +29,21 @@ export default defineConfig(async () => ({
               ? "debug"
               : "debug",
     ),
+  },
+  plugins: [react()],
+  server: {
+    hmr: host
+      ? {
+          host,
+          port: 1421,
+          protocol: "ws",
+        }
+      : undefined,
+    host: host || false,
+    port: 1420,
+    strictPort: true,
+    watch: {
+      ignored: ["**/src-tauri/**"],
+    },
   },
 }));

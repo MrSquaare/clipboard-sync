@@ -1,79 +1,44 @@
-use tauri::{
-    image::Image,
-    menu::{MenuBuilder, MenuItemBuilder},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager,
-};
+use tauri::Emitter;
 use tauri_plugin_log::{Target, TargetKind};
 
 mod commands;
 mod crypto;
 mod platform;
 mod states;
+mod tray;
+pub mod window;
 
 use states::AppState;
+use window::focus_main_window;
 
-fn parse_log_level(level: Option<&str>) -> log::LevelFilter {
-    let level = level.unwrap_or("info");
+fn get_log_level() -> log::LevelFilter {
+    option_env!("LOG_LEVEL")
+        .and_then(|l| l.parse().ok())
+        .unwrap_or(log::LevelFilter::Info)
+}
 
-    match level.to_lowercase().as_str() {
-        "off" => log::LevelFilter::Off,
-        "error" => log::LevelFilter::Error,
-        "warn" => log::LevelFilter::Warn,
-        "info" => log::LevelFilter::Info,
-        "debug" => log::LevelFilter::Debug,
-        _ => {
-            eprintln!("Invalid log level '{}', defaulting to 'info'", level);
-            log::LevelFilter::Info
+fn configure_updater(context: &mut tauri::Context<tauri::Wry>) {
+    if let Some(update_server_url) = option_env!("UPDATE_SERVER_URL") {
+        if let Some(obj) = context
+            .config_mut()
+            .plugins
+            .0
+            .get_mut("updater")
+            .and_then(|v| v.as_object_mut())
+        {
+            obj.insert(
+                "endpoints".to_string(),
+                serde_json::json!([update_server_url]),
+            );
         }
     }
 }
 
-fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let show = MenuItemBuilder::with_id("show", "Show").build(app)?;
-    let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-    let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
-
-    TrayIconBuilder::new()
-        .icon(Image::from_bytes(include_bytes!("../icons/32x32.png"))?)
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| {
-            if let Some(window) = app.get_webview_window("main") {
-                match event.id().as_ref() {
-                    "show" => {
-                        let _ = window.unminimize();
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
-                    "quit" => app.exit(0),
-                    _ => {}
-                }
-            }
-        })
-        .on_tray_icon_event(|tray, event| {
-            if matches!(
-                event,
-                TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                    ..
-                }
-            ) {
-                if let Some(window) = tray.app_handle().get_webview_window("main") {
-                    let _ = window.unminimize();
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
-            }
-        })
-        .build(app)?;
-
-    Ok(())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    configure_updater(&mut context);
+
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -81,7 +46,7 @@ pub fn run() {
                     Target::new(TargetKind::Stdout),
                     Target::new(TargetKind::Webview),
                 ])
-                .level(parse_log_level(option_env!("LOG_LEVEL")))
+                .level(get_log_level())
                 .build(),
         )
         .plugin(tauri_plugin_autostart::init(
@@ -90,9 +55,14 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            focus_main_window(app);
+        }))
         .manage(AppState::default())
         .setup(|app| {
-            setup_tray(app)?;
+            tray::setup(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -114,6 +84,6 @@ pub fn run() {
                 let _ = window.emit("close-requested", ());
             }
         })
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("failed to run app");
 }

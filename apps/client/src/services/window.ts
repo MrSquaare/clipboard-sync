@@ -6,14 +6,6 @@ import { Logger } from "./logger";
 const logger = new Logger("Window");
 
 export class WindowService {
-  async showWindow(): Promise<void> {
-    try {
-      await invoke("show_window");
-    } catch (error) {
-      logger.error("Failed to show window", error);
-    }
-  }
-
   async minimizeWindow(): Promise<void> {
     try {
       await invoke("minimize_window");
@@ -22,15 +14,7 @@ export class WindowService {
     }
   }
 
-  async quitApp(): Promise<void> {
-    try {
-      await invoke("quit_app");
-    } catch (error) {
-      logger.error("Failed to quit app", error);
-    }
-  }
-
-  onCloseRequested(handler: () => void | Promise<void>): () => void {
+  onCloseRequested(handler: () => Promise<void> | void): () => void {
     let unlisten: (() => void) | null = null;
     let shouldCleanup = false;
 
@@ -59,6 +43,22 @@ export class WindowService {
         shouldCleanup = true;
       }
     };
+  }
+
+  async quitApp(): Promise<void> {
+    try {
+      await invoke("quit_app");
+    } catch (error) {
+      logger.error("Failed to quit app", error);
+    }
+  }
+
+  async showWindow(): Promise<void> {
+    try {
+      await invoke("show_window");
+    } catch (error) {
+      logger.error("Failed to show window", error);
+    }
   }
 }
 

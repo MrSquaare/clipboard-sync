@@ -1,9 +1,10 @@
-import type {
-  ClientMessage,
-  ServerMessage,
-  ServerRoomID,
-} from "@clipboard-sync/schemas";
-import { ServerMessageSchema } from "@clipboard-sync/schemas";
+import type { ClientMessage } from "@clipboard-sync/shared/schemas/client";
+
+import {
+  type ServerMessage,
+  ServerMessageSchema,
+  type ServerRoomID,
+} from "@clipboard-sync/shared/schemas/server";
 
 import {
   WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS,
@@ -13,31 +14,30 @@ import {
 } from "../constants";
 import { EventEmitter } from "../lib/event-emitter";
 import { WebSocketClient } from "../lib/websocket-client";
-
 import { Logger } from "./logger";
 
 const logger = new Logger("WebSocket");
 
 export type WebSocketServiceConfig = {
-  url: string;
   roomId: ServerRoomID;
+  url: string;
 };
 
 type WebSocketEventMap = {
-  connected: [];
-  reconnecting: [];
-  disconnected: [];
   closed: [];
-  message: [message: ServerMessage];
+  connected: [];
+  disconnected: [];
   error: [];
+  message: [message: ServerMessage];
+  reconnecting: [];
 };
 
 export class WebSocketService {
   private readonly events = new EventEmitter<WebSocketEventMap>();
 
-  private client: WebSocketClient | null = null;
-
   on = this.events.on.bind(this.events);
+
+  private client: null | WebSocketClient = null;
 
   connect(config: WebSocketServiceConfig): void {
     logger.debug("Connecting to server...");
@@ -55,12 +55,14 @@ export class WebSocketService {
     logger.debug("Disconnecting from server");
 
     client.close();
+
     this.client = null;
   }
 
   send(message: ClientMessage): void {
     if (this.client?.status !== "connected") {
       logger.warn(`Cannot send ${message.type}: not connected`);
+
       return;
     }
 
@@ -73,31 +75,17 @@ export class WebSocketService {
     }
   }
 
-  private ensureClient(config: WebSocketServiceConfig): WebSocketClient {
-    if (this.client) {
-      return this.client;
-    }
-
-    const client = this.createClient(config);
-
-    this.client = client;
-
-    client.connect();
-
-    return client;
-  }
-
   private createClient(config: WebSocketServiceConfig): WebSocketClient {
     const wsUrl = `${config.url}/ws?roomId=${encodeURIComponent(config.roomId)}`;
 
     logger.debug(`Connecting to ${wsUrl}...`);
 
     const client = new WebSocketClient({
-      url: wsUrl,
-      maxRetries: WEBSOCKET_MAX_RECONNECT_ATTEMPTS,
-      maxFirstRetries: WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS,
       baseBackoffMs: WEBSOCKET_RECONNECT_BASE_DELAY_MS,
       maxBackoffMs: WEBSOCKET_RECONNECT_MAX_DELAY_MS,
+      maxFirstRetries: WEBSOCKET_MAX_FIRST_RECONNECT_ATTEMPTS,
+      maxRetries: WEBSOCKET_MAX_RECONNECT_ATTEMPTS,
+      url: wsUrl,
     });
 
     client.on("connected", () => {
@@ -125,6 +113,7 @@ export class WebSocketService {
       logger.debug("Closed");
 
       this.events.emit("closed");
+
       this.client = null;
     });
 
@@ -141,6 +130,20 @@ export class WebSocketService {
     return client;
   }
 
+  private ensureClient(config: WebSocketServiceConfig): WebSocketClient {
+    if (this.client) {
+      return this.client;
+    }
+
+    const client = this.createClient(config);
+
+    this.client = client;
+
+    client.connect();
+
+    return client;
+  }
+
   private handleMessage(message: string): void {
     try {
       const data: unknown = JSON.parse(message);
@@ -148,6 +151,7 @@ export class WebSocketService {
 
       if (!result.success) {
         logger.warn(`Invalid message: ${result.error.message}`);
+
         return;
       }
 

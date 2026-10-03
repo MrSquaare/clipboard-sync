@@ -1,0 +1,29 @@
+name: "Cache Warming"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/actions/setup-env/**"
+      - ".github/workflows/cache.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  warm-cache:
+    runs-on: ubuntu-latest
+    name: Warm Cache
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env

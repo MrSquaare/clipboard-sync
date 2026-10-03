@@ -1,4 +1,6 @@
-import type { ClientId } from "@clipboard-sync/schemas";
+import type { ClientId } from "@clipboard-sync/shared/schemas/client";
+
+import type { PeerMessage } from "../schemas/peer";
 
 import {
   WEBRTC_DATA_CHANNEL_NAME,
@@ -11,22 +13,20 @@ import {
 } from "../constants";
 import { EventEmitter } from "../lib/event-emitter";
 import { PeerClient, type PeerSignal } from "../lib/peer-client";
-import { MessageSchema, type Message } from "../schemas/message";
-import type { PeerMessage } from "../schemas/peer";
+import { type Message, MessageSchema } from "../schemas/message";
 import { useSettingsStore } from "../stores/settings";
-
 import { Logger } from "./logger";
 import { relayTransport, type RelayTransport } from "./relay-transport";
 
 const logger = new Logger("P2P");
 
 type P2PEventMap = {
-  connected: [clientId: ClientId];
-  reconnecting: [clientId: ClientId];
-  disconnected: [clientId: ClientId];
   closed: [clientId: ClientId];
-  message: [senderId: ClientId, message: Message];
+  connected: [clientId: ClientId];
+  disconnected: [clientId: ClientId];
   error: [clientId: ClientId, error: unknown];
+  message: [senderId: ClientId, message: Message];
+  reconnecting: [clientId: ClientId];
 };
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -34,22 +34,34 @@ const RTC_CONFIG: RTCConfiguration = {
 };
 
 export class P2PTransport {
-  private readonly relay: RelayTransport;
-  private readonly peers = new Map<ClientId, PeerClient>();
   private readonly events = new EventEmitter<P2PEventMap>();
-
   on = this.events.on.bind(this.events);
+  private readonly peers = new Map<ClientId, PeerClient>();
 
-  initiate(clientId: ClientId): void {
-    logger.info(`Initiating with ${clientId}`);
+  private readonly relay: RelayTransport;
 
-    this.ensurePeer(clientId, true);
+  private get settingsStore() {
+    return useSettingsStore.getState();
   }
 
-  initiateAll(clientIds: ClientId[]): void {
-    clientIds.forEach((id) => {
-      this.initiate(id);
-    });
+  constructor(relay: RelayTransport) {
+    this.relay = relay;
+
+    this.setupEventHandlers();
+  }
+
+  broadcast(message: Message): ClientId[] {
+    logger.debug(`Broadcasting ${message.type}`);
+
+    const sent: ClientId[] = [];
+
+    for (const clientId of this.peers.keys()) {
+      if (this.sendTo(clientId, message)) {
+        sent.push(clientId);
+      }
+    }
+
+    return sent;
   }
 
   disconnect(clientId: ClientId): void {
@@ -71,18 +83,16 @@ export class P2PTransport {
     }
   }
 
-  broadcast(message: Message): ClientId[] {
-    logger.debug(`Broadcasting ${message.type}`);
+  initiate(clientId: ClientId): void {
+    logger.info(`Initiating with ${clientId}`);
 
-    const sent: ClientId[] = [];
+    this.ensurePeer(clientId, true);
+  }
 
-    for (const clientId of this.peers.keys()) {
-      if (this.sendTo(clientId, message)) {
-        sent.push(clientId);
-      }
-    }
-
-    return sent;
+  initiateAll(clientIds: ClientId[]): void {
+    clientIds.forEach((id) => {
+      this.initiate(id);
+    });
   }
 
   sendTo(clientId: ClientId, message: Message): boolean {
@@ -90,6 +100,7 @@ export class P2PTransport {
 
     if (peer?.status !== "connected") {
       logger.warn(`Cannot send message to ${clientId}: not connected`);
+
       return false;
     }
 
@@ -106,45 +117,17 @@ export class P2PTransport {
     }
   }
 
-  constructor(relay: RelayTransport) {
-    this.relay = relay;
-
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers(): void {
-    this.relay.on("message", (senderId, message) => {
-      this.handleMessage(senderId, message);
-    });
-  }
-
-  private ensurePeer(clientId: ClientId, initiator: boolean): PeerClient {
-    const existing = this.peers.get(clientId);
-
-    if (existing) {
-      return existing;
-    }
-
-    const peer = this.createPeer(clientId, initiator);
-
-    this.peers.set(clientId, peer);
-
-    peer.connect();
-
-    return peer;
-  }
-
   private createPeer(clientId: ClientId, initiator: boolean): PeerClient {
     const peer = new PeerClient({
-      initiator,
-      rtcConfig: RTC_CONFIG,
-      channelLabel: WEBRTC_DATA_CHANNEL_NAME,
-      ordered: true,
-      maxRetries: WEBRTC_MAX_RESTART_ATTEMPTS,
-      maxFirstRetries: WEBRTC_MAX_FIRST_RESTART_ATTEMPTS,
       baseBackoffMs: WEBRTC_RESTART_BASE_DELAY_MS,
-      maxBackoffMs: WEBRTC_RESTART_MAX_DELAY_MS,
+      channelLabel: WEBRTC_DATA_CHANNEL_NAME,
       disconnectGraceMs: WEBRTC_DISCONNECTED_GRACE_MS,
+      initiator,
+      maxBackoffMs: WEBRTC_RESTART_MAX_DELAY_MS,
+      maxFirstRetries: WEBRTC_MAX_FIRST_RESTART_ATTEMPTS,
+      maxRetries: WEBRTC_MAX_RESTART_ATTEMPTS,
+      ordered: true,
+      rtcConfig: RTC_CONFIG,
     });
 
     peer.on("connected", () => {
@@ -194,55 +177,66 @@ export class P2PTransport {
     return peer;
   }
 
+  private ensurePeer(clientId: ClientId, initiator: boolean): PeerClient {
+    const existing = this.peers.get(clientId);
+
+    if (existing) {
+      return existing;
+    }
+
+    const peer = this.createPeer(clientId, initiator);
+
+    this.peers.set(clientId, peer);
+
+    peer.connect();
+
+    return peer;
+  }
+
+  private fromPeerMessage(message: PeerMessage): null | PeerSignal {
+    switch (message.type) {
+      case "PEER_ANSWER":
+        return { sdp: message.sdp, type: "answer" };
+      case "PEER_ICE":
+        return { candidate: message.candidate, type: "candidate" };
+      case "PEER_OFFER":
+        return { sdp: message.sdp, type: "offer" };
+      default:
+        return null;
+    }
+  }
+
   private handleMessage(senderId: ClientId, message: Message): void {
     switch (message.type) {
-      case "PEER_OFFER":
       case "PEER_ANSWER":
       case "PEER_ICE":
+      case "PEER_OFFER":
         this.handleRelayPeerSignal(senderId, message);
+
         break;
     }
   }
 
-  private async handleRelayPeerSignal(
-    senderId: ClientId,
-    message: PeerMessage,
-  ): Promise<void> {
-    if (this.settingsStore.transportMode === "relay") {
-      logger.debug(
-        `Received peer signal ${message.type} from ${senderId} while in relay-only mode, ignoring`,
-      );
-      return;
-    }
-
-    const signal = this.fromPeerMessage(message);
-
-    if (!signal) {
-      return;
-    }
-
-    const peer = this.ensurePeer(senderId, false);
-
+  private handlePeerMessage(clientId: ClientId, message: string): void {
     try {
-      await peer.signal(signal);
-    } catch (error) {
-      logger.error(
-        `Failed to handle signal ${message.type} from ${senderId}`,
-        error,
-      );
-    }
-  }
+      const parsed = JSON.parse(message) as unknown;
+      const result = MessageSchema.safeParse(parsed);
 
-  private fromPeerMessage(message: PeerMessage): PeerSignal | null {
-    switch (message.type) {
-      case "PEER_OFFER":
-        return { type: "offer", sdp: message.sdp };
-      case "PEER_ANSWER":
-        return { type: "answer", sdp: message.sdp };
-      case "PEER_ICE":
-        return { type: "candidate", candidate: message.candidate };
-      default:
-        return null;
+      if (!result.success) {
+        logger.warn(
+          `Invalid message from ${clientId}: ${result.error.message}`,
+        );
+
+        return;
+      }
+
+      const msg = result.data;
+
+      logger.debug(`Received message ${msg.type} from ${clientId}`);
+
+      this.events.emit("message", clientId, msg);
+    } catch (error) {
+      logger.error(`Failed to parse message from ${clientId}`, error);
     }
   }
 
@@ -266,48 +260,58 @@ export class P2PTransport {
     }
   }
 
-  private toPeerMessage(signal: PeerSignal): PeerMessage | null {
+  private async handleRelayPeerSignal(
+    senderId: ClientId,
+    message: PeerMessage,
+  ): Promise<void> {
+    if (this.settingsStore.transportMode === "relay") {
+      logger.debug(
+        `Received peer signal ${message.type} from ${senderId} while in relay-only mode, ignoring`,
+      );
+
+      return;
+    }
+
+    const signal = this.fromPeerMessage(message);
+
+    if (!signal) {
+      return;
+    }
+
+    const peer = this.ensurePeer(senderId, false);
+
+    try {
+      await peer.signal(signal);
+    } catch (error) {
+      logger.error(
+        `Failed to handle signal ${message.type} from ${senderId}`,
+        error,
+      );
+    }
+  }
+
+  private setupEventHandlers(): void {
+    this.relay.on("message", (senderId, message) => {
+      this.handleMessage(senderId, message);
+    });
+  }
+
+  private toPeerMessage(signal: PeerSignal): null | PeerMessage {
     switch (signal.type) {
-      case "offer":
       case "answer":
+      case "offer":
         return {
-          type: signal.type === "offer" ? "PEER_OFFER" : "PEER_ANSWER",
           sdp: signal.sdp,
+          type: signal.type === "offer" ? "PEER_OFFER" : "PEER_ANSWER",
         };
       case "candidate":
         return {
-          type: "PEER_ICE",
           candidate: signal.candidate,
+          type: "PEER_ICE",
         };
       default:
         return null;
     }
-  }
-
-  private handlePeerMessage(clientId: ClientId, message: string): void {
-    try {
-      const parsed = JSON.parse(message) as unknown;
-      const result = MessageSchema.safeParse(parsed);
-
-      if (!result.success) {
-        logger.warn(
-          `Invalid message from ${clientId}: ${result.error.message}`,
-        );
-        return;
-      }
-
-      const msg = result.data;
-
-      logger.debug(`Received message ${msg.type} from ${clientId}`);
-
-      this.events.emit("message", clientId, msg);
-    } catch (error) {
-      logger.error(`Failed to parse message from ${clientId}`, error);
-    }
-  }
-
-  private get settingsStore() {
-    return useSettingsStore.getState();
   }
 }
 

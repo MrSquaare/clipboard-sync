@@ -1,3 +1,6 @@
+import type { UseFormReturnType } from "@mantine/form";
+import type { FC } from "react";
+
 import {
   ActionIcon,
   Box,
@@ -7,13 +10,14 @@ import {
   Group,
   NumberInput,
   SegmentedControl,
+  Select,
   Stack,
   Switch,
   Text,
   TextInput,
 } from "@mantine/core";
-import type { UseFormReturnType } from "@mantine/form";
 import {
+  IconBell,
   IconBoxAlignBottomLeft,
   IconClipboard,
   IconCloudDataConnection,
@@ -21,30 +25,37 @@ import {
   IconGizmo,
   IconPingPong,
   IconPlayerPlay,
+  IconRefresh,
+  IconRotate,
   IconServer,
+  IconSparkles,
   IconUsers,
   IconWindowMinimize,
   IconX,
 } from "@tabler/icons-react";
-import type { FC } from "react";
 
 import type { SettingsFormValues } from "../../schemas/settings-form";
 
+import { updaterService } from "../../services/updater";
+import { useUpdaterStore } from "../../stores/updater";
+
 export type SettingsFormProps = {
+  connected: boolean;
   form: UseFormReturnType<SettingsFormValues>;
-  onSubmit: (values: SettingsFormValues) => Promise<void>;
   onClose: () => void;
   onResetServerURL: () => void;
-  connected: boolean;
+  onSubmit: (values: SettingsFormValues) => Promise<void>;
 };
 
 export const SettingsForm: FC<SettingsFormProps> = ({
+  connected,
   form,
-  onSubmit,
   onClose,
   onResetServerURL,
-  connected,
+  onSubmit,
 }) => {
+  const updater = useUpdaterStore();
+
   return (
     <form onSubmit={form.onSubmit(onSubmit)}>
       <Stack gap={"md"}>
@@ -222,6 +233,98 @@ export const SettingsForm: FC<SettingsFormProps> = ({
             }}
             {...form.getInputProps("developerMode", { type: "checkbox" })}
           />
+        </Stack>
+
+        <Divider />
+
+        <Stack gap={"md"}>
+          <Text fw={600}>Updates</Text>
+
+          <Select
+            data={[
+              { label: "Release (Stable)", value: "release" },
+              { label: "Prerelease (Preview)", value: "prerelease" },
+            ]}
+            description={"Which channel to receive updates from"}
+            label={"Channel"}
+            leftSection={<IconSparkles size={16} />}
+            {...form.getInputProps("updateChannel")}
+          />
+
+          <Switch
+            label={
+              <Group>
+                <IconBell size={16} />
+                <Box>
+                  <Text size={"sm"}>Notify on new updates</Text>
+                  <Text c={"dimmed"} size={"xs"}>
+                    Inform when a new version of the app is available
+                  </Text>
+                </Box>
+              </Group>
+            }
+            styles={{
+              track: {
+                margin: "auto 0",
+              },
+            }}
+            {...form.getInputProps("notifyOnUpdate", { type: "checkbox" })}
+          />
+
+          <Group justify={"space-between"}>
+            {updater.status === "ready" ? (
+              <Button
+                color={"teal"}
+                leftSection={<IconRotate size={16} />}
+                onClick={() => updaterService.restart()}
+                size={"xs"}
+                variant={"light"}
+              >
+                Restart to update
+              </Button>
+            ) : (
+              <Button
+                disabled={updater.status === "downloading"}
+                leftSection={<IconRefresh size={16} />}
+                loading={updater.status === "checking"}
+                onClick={() => updaterService.check(true)}
+                size={"xs"}
+                variant={"light"}
+              >
+                Check for updates
+              </Button>
+            )}
+
+            {updater.status === "up-to-date" && (
+              <Text c={"teal"} size={"xs"}>
+                You are on the latest version.
+              </Text>
+            )}
+
+            {updater.status === "available" && (
+              <Text c={"blue"} size={"xs"}>
+                Update v{updater.update?.version} is available!
+              </Text>
+            )}
+
+            {updater.status === "downloading" && (
+              <Text c={"blue"} size={"xs"}>
+                Downloading update...
+              </Text>
+            )}
+
+            {updater.status === "ready" && (
+              <Text c={"teal"} size={"xs"}>
+                Update ready.
+              </Text>
+            )}
+
+            {updater.status === "error" && (
+              <Text c={"red"} size={"xs"}>
+                {updater.error}
+              </Text>
+            )}
+          </Group>
         </Stack>
 
         <Group justify={"flex-end"}>

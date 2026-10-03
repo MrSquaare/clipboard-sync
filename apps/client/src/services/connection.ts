@@ -1,22 +1,35 @@
 import type {
   ServerHelloMessage,
   ServerMessage,
-} from "@clipboard-sync/schemas";
+} from "@clipboard-sync/shared/schemas/server";
 
 import { useConnectionStore } from "../stores/connection";
 import { useSettingsStore } from "../stores/settings";
-
 import { Logger } from "./logger";
 import { websocketService, WebSocketService } from "./websocket";
 
 const logger = new Logger("Connection");
 
 export class ConnectionService {
+  private pingTimer: null | number = null;
   private readonly ws: WebSocketService;
-  private pingTimer: number | null = null;
+
+  private get connectionStore() {
+    return useConnectionStore.getState();
+  }
+
+  private get settingsStore() {
+    return useSettingsStore.getState();
+  }
+
+  constructor(ws: WebSocketService) {
+    this.ws = ws;
+
+    this.setupEventHandlers();
+  }
 
   connect(): void {
-    const { serverUrl, roomId } = this.settingsStore;
+    const { roomId, serverUrl } = this.settingsStore;
 
     logger.info(`Connecting to room ${roomId}`);
 
@@ -24,8 +37,8 @@ export class ConnectionService {
     this.connectionStore.setError(null);
 
     this.ws.connect({
-      url: serverUrl,
       roomId,
+      url: serverUrl,
     });
   }
 
@@ -40,19 +53,8 @@ export class ConnectionService {
     this.ws.disconnect();
   }
 
-  constructor(ws: WebSocketService) {
-    this.ws = ws;
-
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers(): void {
-    this.ws.on("connected", () => this.handleConnected());
-    this.ws.on("reconnecting", () => this.handleReconnecting());
-    this.ws.on("disconnected", () => this.handleDisconnected());
-    this.ws.on("closed", () => this.handleClosed());
-    this.ws.on("message", (message) => this.handleMessage(message));
-    this.ws.on("error", () => this.handleError());
+  private handleClosed(): void {
+    logger.info("Connection closed");
   }
 
   private handleConnected(): void {
@@ -61,20 +63,14 @@ export class ConnectionService {
     logger.debug(`Sending HELLO with client name: ${clientName}`);
 
     this.ws.send({
-      type: "HELLO",
       payload: {
-        version: 1,
         clientName,
+        version: 1,
       },
+      type: "HELLO",
     });
 
     this.startPing();
-  }
-
-  private handleReconnecting(): void {
-    logger.info("Reconnecting to server...");
-
-    this.connectionStore.setStatus("reconnecting");
   }
 
   private handleDisconnected(): void {
@@ -82,10 +78,6 @@ export class ConnectionService {
 
     this.stopPing();
     this.connectionStore.setStatus("disconnected");
-  }
-
-  private handleClosed(): void {
-    logger.info("Connection closed");
   }
 
   private handleError(): void {
@@ -98,8 +90,15 @@ export class ConnectionService {
     switch (message.type) {
       case "WELCOME":
         this.handleWelcome(message);
+
         break;
     }
+  }
+
+  private handleReconnecting(): void {
+    logger.info("Reconnecting to server...");
+
+    this.connectionStore.setStatus("reconnecting");
   }
 
   private handleWelcome(message: ServerHelloMessage): void {
@@ -110,6 +109,15 @@ export class ConnectionService {
     this.connectionStore.setClientId(clientId);
     this.connectionStore.setStatus("connected");
     this.connectionStore.setError(null);
+  }
+
+  private setupEventHandlers(): void {
+    this.ws.on("connected", () => this.handleConnected());
+    this.ws.on("reconnecting", () => this.handleReconnecting());
+    this.ws.on("disconnected", () => this.handleDisconnected());
+    this.ws.on("closed", () => this.handleClosed());
+    this.ws.on("message", (message) => this.handleMessage(message));
+    this.ws.on("error", () => this.handleError());
   }
 
   private startPing(): void {
@@ -127,18 +135,11 @@ export class ConnectionService {
   private stopPing(): void {
     if (this.pingTimer) {
       clearInterval(this.pingTimer);
+
       this.pingTimer = null;
 
       logger.debug("Ping timer stopped");
     }
-  }
-
-  private get connectionStore() {
-    return useConnectionStore.getState();
-  }
-
-  private get settingsStore() {
-    return useSettingsStore.getState();
   }
 }
 

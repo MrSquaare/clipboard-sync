@@ -18,7 +18,7 @@ import { useSettingsStore } from "../stores/settings";
 
 export function RoomScreen(): React.JSX.Element {
   const settings = useSettingsStore();
-  const [settingsOpened, { open: openSettings, close: closeSettings }] =
+  const [settingsOpened, { close: closeSettings, open: openSettings }] =
     useDisclosure(false);
 
   const { disconnect } = useConnection();
@@ -27,8 +27,8 @@ export function RoomScreen(): React.JSX.Element {
 
   const handleDisconnect = async () => {
     settings.update({
-      saveSecret: false,
       autoConnectOnStart: false,
+      saveSecret: false,
     });
 
     await disconnect();

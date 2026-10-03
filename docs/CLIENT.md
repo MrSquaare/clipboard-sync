@@ -11,10 +11,12 @@ The backend provides secure access to system resources and cryptographic operati
 ### Modules
 
 **Crypto Module**
+
 - Handles encryption and decryption operations
 - Key derivation from user-provided secret
 
 **Platform Module**
+
 - Retrieves device-specific information
 
 ### Tauri Commands
@@ -33,32 +35,38 @@ The frontend handles networking, application logic, and user interface.
 ### Responsibilities
 
 **WebSocket Connection**
+
 - Persistent connection to the relay server
 - Message sending and receiving
 - Auto-reconnection handling
 
 **WebRTC Connection**
+
 - Peer-to-peer connection establishment
 - Direct data channel communication
 - Message sending and receiving
 - Auto-reconnection handling
 
 **Message Coordination**
+
 - Encryption and decryption coordination with backend
 - Transport mode management (P2P vs Relay)
 - Message deduplication and ordering
 
 **Clipboard Management**
+
 - Monitors system clipboard for changes
 - Sends clipboard updates to other clients
 - Applies received clipboard updates
 
 **State Management**
+
 - Connection status and client information
 - List of connected clients
 - User settings and configuration
 
 **UI**
+
 - Room setup and connection interface
 - Display of connected clients and their status
 - User settings and configuration management

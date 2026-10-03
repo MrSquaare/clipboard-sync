@@ -7,23 +7,12 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]>> {
     keyof TEventMap,
     Set<EventHandler<TEventMap[keyof TEventMap]>>
   >();
-  on<TEvent extends keyof TEventMap>(
-    event: TEvent,
-    handler: EventHandler<TEventMap[TEvent]>,
-  ): () => void {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, new Set());
-    }
+  clear(event: keyof TEventMap): void {
+    this.eventHandlers.delete(event);
+  }
 
-    this.eventHandlers
-      .get(event)
-      ?.add(handler as EventHandler<TEventMap[keyof TEventMap]>);
-
-    return () => {
-      return this.eventHandlers
-        .get(event)
-        ?.delete(handler as EventHandler<TEventMap[keyof TEventMap]>);
-    };
+  clearAll(): void {
+    this.eventHandlers.clear();
   }
 
   emit<TEvent extends keyof TEventMap>(
@@ -41,11 +30,22 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]>> {
     });
   }
 
-  clear(event: keyof TEventMap): void {
-    this.eventHandlers.delete(event);
-  }
+  on<TEvent extends keyof TEventMap>(
+    event: TEvent,
+    handler: EventHandler<TEventMap[TEvent]>,
+  ): () => void {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, new Set());
+    }
 
-  clearAll(): void {
-    this.eventHandlers.clear();
+    this.eventHandlers
+      .get(event)
+      ?.add(handler as EventHandler<TEventMap[keyof TEventMap]>);
+
+    return () => {
+      return this.eventHandlers
+        .get(event)
+        ?.delete(handler as EventHandler<TEventMap[keyof TEventMap]>);
+    };
   }
 }

@@ -1,12 +1,28 @@
 import { invoke } from "@tauri-apps/api/core";
-import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 import { Logger } from "./logger";
 
 const logger = new Logger("Platform");
 
 export class PlatformService {
-  async getDeviceName(): Promise<string | null> {
+  async disableAutoStart(): Promise<void> {
+    try {
+      await disable();
+    } catch (error) {
+      logger.error("Failed to disable auto-start", error);
+    }
+  }
+
+  async enableAutoStart(): Promise<void> {
+    try {
+      await enable();
+    } catch (error) {
+      logger.error("Failed to enable auto-start", error);
+    }
+  }
+
+  async getDeviceName(): Promise<null | string> {
     try {
       return await invoke("get_device_name");
     } catch (error) {
@@ -23,22 +39,6 @@ export class PlatformService {
       logger.error("Failed to check auto-start status", error);
 
       return false;
-    }
-  }
-
-  async enableAutoStart(): Promise<void> {
-    try {
-      await enable();
-    } catch (error) {
-      logger.error("Failed to enable auto-start", error);
-    }
-  }
-
-  async disableAutoStart(): Promise<void> {
-    try {
-      await disable();
-    } catch (error) {
-      logger.error("Failed to disable auto-start", error);
     }
   }
 }

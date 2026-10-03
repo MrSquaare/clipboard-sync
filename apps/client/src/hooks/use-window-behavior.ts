@@ -2,11 +2,10 @@ import { useEffect } from "react";
 
 import { windowService } from "../services/window";
 import { useSettingsStore } from "../stores/settings";
-
 import { useOneTimeEffect } from "./use-one-time-effect";
 
 export const useWindowBehavior = () => {
-  const { minimizeOnStart, minimizeOnClose } = useSettingsStore();
+  const { minimizeOnClose, minimizeOnStart } = useSettingsStore();
 
   useOneTimeEffect(() => {
     if (!minimizeOnStart) {

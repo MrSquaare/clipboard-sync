@@ -11,17 +11,17 @@ import { secretService } from "../services/secret";
 import { transportService } from "../services/transport";
 import { useConnectionStore } from "../stores/connection";
 
+export type ConnectOptions = {
+  saveSecret: boolean;
+  secret: string;
+};
+
 export type ConnectWithSavedOptions = {
   saveSecret: boolean;
 };
 
-export type ConnectOptions = {
-  secret: string;
-  saveSecret: boolean;
-};
-
 export const useConnection = () => {
-  const { setStatus, setError } = useConnectionStore();
+  const { setError, setStatus } = useConnectionStore();
 
   const connect = useCallback(
     async (options: ConnectOptions) => {
