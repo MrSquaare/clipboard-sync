@@ -1,3 +1,6 @@
+import type { UseFormReturnType } from "@mantine/form";
+import type { FC } from "react";
+
 import {
   ActionIcon,
   Box,
@@ -13,13 +16,12 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import type { UseFormReturnType } from "@mantine/form";
 import {
+  IconBell,
   IconBoxAlignBottomLeft,
   IconClipboard,
   IconCloudDataConnection,
   IconCode,
-  IconBell,
   IconGizmo,
   IconPingPong,
   IconPlayerPlay,
@@ -31,26 +33,26 @@ import {
   IconWindowMinimize,
   IconX,
 } from "@tabler/icons-react";
-import type { FC } from "react";
 
 import type { SettingsFormValues } from "../../schemas/settings-form";
+
 import { updaterService } from "../../services/updater";
 import { useUpdaterStore } from "../../stores/updater";
 
 export type SettingsFormProps = {
+  connected: boolean;
   form: UseFormReturnType<SettingsFormValues>;
-  onSubmit: (values: SettingsFormValues) => Promise<void>;
   onClose: () => void;
   onResetServerURL: () => void;
-  connected: boolean;
+  onSubmit: (values: SettingsFormValues) => Promise<void>;
 };
 
 export const SettingsForm: FC<SettingsFormProps> = ({
+  connected,
   form,
-  onSubmit,
   onClose,
   onResetServerURL,
-  connected,
+  onSubmit,
 }) => {
   const updater = useUpdaterStore();
 

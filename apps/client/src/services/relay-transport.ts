@@ -6,8 +6,7 @@ import type {
 } from "@clipboard-sync/shared/schemas/server";
 
 import { EventEmitter } from "../lib/event-emitter";
-import { MessageSchema, type Message } from "../schemas/message";
-
+import { type Message, MessageSchema } from "../schemas/message";
 import { CryptoService } from "./crypto";
 import { Logger } from "./logger";
 import { websocketService, type WebSocketService } from "./websocket";
@@ -19,11 +18,17 @@ type RelayEventMap = {
 };
 
 export class RelayTransport {
-  private readonly ws: WebSocketService;
-  private readonly crypto = new CryptoService();
   private readonly events = new EventEmitter<RelayEventMap>();
-
   on = this.events.on.bind(this.events);
+  private readonly crypto = new CryptoService();
+
+  private readonly ws: WebSocketService;
+
+  constructor(ws: WebSocketService) {
+    this.ws = ws;
+
+    this.setupEventHandlers();
+  }
 
   async broadcast(targetIds: ClientId[], message: Message): Promise<void> {
     try {
@@ -32,9 +37,9 @@ export class RelayTransport {
       const payload = await this.crypto.encryptMessage(JSON.stringify(message));
 
       this.ws.send({
-        type: "RELAY_BROADCAST",
-        targetIds,
         payload,
+        targetIds,
+        type: "RELAY_BROADCAST",
       });
     } catch (error) {
       logger.error("Failed to broadcast message", error);
@@ -48,23 +53,13 @@ export class RelayTransport {
       const payload = await this.crypto.encryptMessage(JSON.stringify(message));
 
       this.ws.send({
-        type: "RELAY_SEND",
-        targetId,
         payload,
+        targetId,
+        type: "RELAY_SEND",
       });
     } catch (error) {
       logger.error(`Failed to send message to ${targetId}`, error);
     }
-  }
-
-  constructor(ws: WebSocketService) {
-    this.ws = ws;
-
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers(): void {
-    this.ws.on("message", (message) => this.handleMessage(message));
   }
 
   private handleMessage(message: ServerMessage): void {
@@ -72,6 +67,7 @@ export class RelayTransport {
       case "RELAY_BROADCAST":
       case "RELAY_SEND":
         this.handleRelayMessage(message);
+
         break;
     }
   }
@@ -79,7 +75,7 @@ export class RelayTransport {
   private async handleRelayMessage(
     message: ServerRelayBroadcastMessage | ServerRelaySendMessage,
   ): Promise<void> {
-    const { senderId, payload } = message;
+    const { payload, senderId } = message;
 
     try {
       const decrypted = await this.crypto.decryptMessage(payload);
@@ -89,6 +85,7 @@ export class RelayTransport {
         logger.warn(
           `Invalid relay message from ${senderId}: ${result.error.message}`,
         );
+
         return;
       }
 
@@ -100,6 +97,10 @@ export class RelayTransport {
     } catch (error) {
       logger.error(`Failed to handle message from ${senderId}`, error);
     }
+  }
+
+  private setupEventHandlers(): void {
+    this.ws.on("message", (message) => this.handleMessage(message));
   }
 }
 

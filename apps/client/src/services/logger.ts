@@ -8,14 +8,14 @@ import {
 import { getErrorMessage } from "../errors/helpers";
 import { useLogsStore } from "../stores/logs";
 
-export type LogLevel = "debug" | "info" | "warn" | "error" | "off";
+export type LogLevel = "debug" | "error" | "info" | "off" | "warn";
 
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
-  info: 1,
-  warn: 2,
   error: 3,
+  info: 1,
   off: 4,
+  warn: 2,
 };
 
 const parseLogLevel = (level: string): LogLevel => {
@@ -23,13 +23,14 @@ const parseLogLevel = (level: string): LogLevel => {
 
   switch (lower) {
     case "debug":
-    case "info":
-    case "warn":
     case "error":
+    case "info":
     case "off":
+    case "warn":
       return lower as LogLevel;
     default:
       console.warn(`Invalid log level '${level}', defaulting to 'info'`);
+
       return "info";
   }
 };
@@ -39,8 +40,27 @@ const MIN_PRIORITY = LOG_LEVEL_PRIORITY[parseLogLevel(__LOG_LEVEL__)];
 export class Logger {
   private readonly context: string;
 
+  private get logsStore() {
+    return useLogsStore.getState();
+  }
+
   constructor(context: string) {
     this.context = context;
+  }
+
+  debug(message: string): void {
+    this.log("debug", message);
+  }
+
+  error(message: string, error?: unknown): void {
+    const errorMessage = error ? getErrorMessage(error) : undefined;
+    const fullMessage = errorMessage ? `${message}: ${errorMessage}` : message;
+
+    this.log("error", fullMessage);
+  }
+
+  info(message: string): void {
+    this.log("info", message);
   }
 
   log(level: LogLevel, message: string): void {
@@ -57,41 +77,26 @@ export class Logger {
     switch (level) {
       case "debug":
         tauriDebug(formatted).catch(() => {});
-        break;
-      case "info":
-        tauriInfo(formatted).catch(() => {});
-        break;
-      case "warn":
-        tauriWarn(formatted).catch(() => {});
+
         break;
       case "error":
         tauriError(formatted).catch(() => {});
+
+        break;
+      case "info":
+        tauriInfo(formatted).catch(() => {});
+
+        break;
+      case "warn":
+        tauriWarn(formatted).catch(() => {});
+
         break;
     }
 
     this.logsStore.log(level, formatted);
   }
 
-  debug(message: string): void {
-    this.log("debug", message);
-  }
-
-  info(message: string): void {
-    this.log("info", message);
-  }
-
   warn(message: string): void {
     this.log("warn", message);
-  }
-
-  error(message: string, error?: unknown): void {
-    const errorMessage = error ? getErrorMessage(error) : undefined;
-    const fullMessage = errorMessage ? `${message}: ${errorMessage}` : message;
-
-    this.log("error", fullMessage);
-  }
-
-  private get logsStore() {
-    return useLogsStore.getState();
   }
 }

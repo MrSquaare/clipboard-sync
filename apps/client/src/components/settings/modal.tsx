@@ -1,7 +1,7 @@
 import { Modal, Stack } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { zod4Resolver } from "mantine-form-zod-resolver";
-import { useEffect, type FC } from "react";
+import { type FC, useEffect } from "react";
 
 import {
   SettingsFormSchema,
@@ -10,30 +10,29 @@ import {
 import { platformService } from "../../services/platform";
 import { useConnectionStore } from "../../stores/connection";
 import { useSettingsStore } from "../../stores/settings";
-
 import { SettingsForm } from "./form";
 
 export type SettingsModalProps = {
-  opened: boolean;
   onClose: () => void;
+  opened: boolean;
 };
 
-export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
+export const SettingsModal: FC<SettingsModalProps> = ({ onClose, opened }) => {
   const { status } = useConnectionStore();
   const connected = status !== "disconnected";
   const settings = useSettingsStore();
 
   const getFormInitialValues = (): SettingsFormValues => ({
-    serverUrl: settings.serverUrl,
-    transportMode: settings.transportMode,
+    developerMode: settings.developerMode,
+    launchOnStart: false,
+    minimizeOnClose: settings.minimizeOnClose,
+    minimizeOnStart: settings.minimizeOnStart,
+    notifyOnUpdate: settings.notifyOnUpdate,
     pingInterval: settings.pingInterval,
     pollingInterval: settings.pollingInterval,
-    launchOnStart: false,
-    minimizeOnStart: settings.minimizeOnStart,
-    minimizeOnClose: settings.minimizeOnClose,
-    developerMode: settings.developerMode,
+    serverUrl: settings.serverUrl,
+    transportMode: settings.transportMode,
     updateChannel: settings.updateChannel,
-    notifyOnUpdate: settings.notifyOnUpdate,
   });
 
   const form = useForm<SettingsFormValues>({
@@ -65,15 +64,15 @@ export const SettingsModal: FC<SettingsModalProps> = ({ opened, onClose }) => {
 
   const handleSubmit = async (values: SettingsFormValues) => {
     settings.update({
-      serverUrl: values.serverUrl,
-      transportMode: values.transportMode,
+      developerMode: values.developerMode,
+      minimizeOnClose: values.minimizeOnClose,
+      minimizeOnStart: values.minimizeOnStart,
+      notifyOnUpdate: values.notifyOnUpdate,
       pingInterval: values.pingInterval,
       pollingInterval: values.pollingInterval,
-      minimizeOnStart: values.minimizeOnStart,
-      minimizeOnClose: values.minimizeOnClose,
-      developerMode: values.developerMode,
+      serverUrl: values.serverUrl,
+      transportMode: values.transportMode,
       updateChannel: values.updateChannel,
-      notifyOnUpdate: values.notifyOnUpdate,
     });
 
     if (values.launchOnStart) {

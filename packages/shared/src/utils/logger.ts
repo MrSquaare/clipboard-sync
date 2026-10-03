@@ -1,36 +1,30 @@
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = "debug" | "error" | "info" | "warn";
 
 export const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
+  error: 3,
   info: 1,
   warn: 2,
-  error: 3,
 };
 
 export class Logger {
-  private level: number;
   private context: string;
+  private level: number;
 
   constructor(level: LogLevel, context: string) {
     this.level = LOG_LEVEL_PRIORITY[level];
     this.context = context;
   }
 
-  private format(
-    level: LogLevel,
-    message: string,
-    meta?: Record<string, unknown>,
-  ) {
-    const timestamp = new Date().toISOString();
-    const context = this.context;
-    const metaStr = meta ? JSON.stringify(meta) : "";
-
-    return `[${timestamp}] [${context}] ${level.toUpperCase()}: ${message} ${metaStr}`;
-  }
-
   debug(message: string, meta?: Record<string, unknown>) {
     if (LOG_LEVEL_PRIORITY.debug >= this.level) {
       console.debug(this.format("debug", message, meta));
+    }
+  }
+
+  error(message: string, meta?: Record<string, unknown>) {
+    if (LOG_LEVEL_PRIORITY.error >= this.level) {
+      console.error(this.format("error", message, meta));
     }
   }
 
@@ -46,9 +40,15 @@ export class Logger {
     }
   }
 
-  error(message: string, meta?: Record<string, unknown>) {
-    if (LOG_LEVEL_PRIORITY.error >= this.level) {
-      console.error(this.format("error", message, meta));
-    }
+  private format(
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, unknown>,
+  ) {
+    const timestamp = new Date().toISOString();
+    const context = this.context;
+    const metaStr = meta ? JSON.stringify(meta) : "";
+
+    return `[${timestamp}] [${context}] ${level.toUpperCase()}: ${message} ${metaStr}`;
   }
 }

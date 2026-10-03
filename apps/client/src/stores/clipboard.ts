@@ -2,13 +2,13 @@ import { create } from "zustand";
 
 import type { ClipboardUpdateMessage } from "../schemas/clipboard";
 
-export type ClipboardStoreState = {
-  lastMessage: ClipboardUpdateMessage | null;
+export type ClipboardStoreActions = {
+  reset: () => void;
+  setLastMessage: (lastMessage: ClipboardUpdateMessage) => void;
 };
 
-export type ClipboardStoreActions = {
-  setLastMessage: (lastMessage: ClipboardUpdateMessage) => void;
-  reset: () => void;
+export type ClipboardStoreState = {
+  lastMessage: ClipboardUpdateMessage | null;
 };
 
 const initialState: ClipboardStoreState = {
@@ -16,9 +16,9 @@ const initialState: ClipboardStoreState = {
 };
 
 export const useClipboardStore = create<
-  ClipboardStoreState & ClipboardStoreActions
+  ClipboardStoreActions & ClipboardStoreState
 >((set) => ({
   ...initialState,
-  setLastMessage: (lastMessage) => set({ lastMessage }),
   reset: () => set(initialState),
+  setLastMessage: (lastMessage) => set({ lastMessage }),
 }));

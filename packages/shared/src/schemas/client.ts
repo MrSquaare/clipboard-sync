@@ -22,8 +22,8 @@ export const ClientInfoSchema = z.object({
 export type ClientInfo = z.infer<typeof ClientInfoSchema>;
 
 export const ClientEncryptedPayloadSchema = z.object({
-  iv: z.string(),
   ciphertext: z.string(),
+  iv: z.string(),
   salt: z.string(),
 });
 
@@ -32,8 +32,8 @@ export type ClientEncryptedPayload = z.infer<
 >;
 
 export const ClientRTCSessionDescriptionInitSchema = z.object({
-  type: z.enum(["offer", "answer", "pranswer", "rollback"]),
   sdp: z.string().optional(),
+  type: z.enum(["offer", "answer", "pranswer", "rollback"]),
 });
 
 export type ClientRTCSessionDescriptionInit = z.infer<
@@ -52,11 +52,11 @@ export type ClientRTCIceCandidateInit = z.infer<
 >;
 
 export const ClientHelloMessageSchema = z.object({
-  type: z.literal("HELLO"),
   payload: z.object({
-    version: z.number(),
     clientName: ClientNameSchema,
+    version: z.number(),
   }),
+  type: z.literal("HELLO"),
 });
 
 export type ClientHelloMessage = z.infer<typeof ClientHelloMessageSchema>;
@@ -76,9 +76,9 @@ export const ClientLeaveMessageSchema = z.object({
 export type ClientLeaveMessage = z.infer<typeof ClientLeaveMessageSchema>;
 
 export const ClientRelayBroadcastMessageSchema = z.object({
-  type: z.literal("RELAY_BROADCAST"),
-  targetIds: z.array(ClientIdSchema).optional(),
   payload: ClientEncryptedPayloadSchema,
+  targetIds: z.array(ClientIdSchema).optional(),
+  type: z.literal("RELAY_BROADCAST"),
 });
 
 export type ClientRelayBroadcastMessage = z.infer<
@@ -86,9 +86,9 @@ export type ClientRelayBroadcastMessage = z.infer<
 >;
 
 export const ClientRelaySendMessageSchema = z.object({
-  type: z.literal("RELAY_SEND"),
-  targetId: ClientIdSchema,
   payload: ClientEncryptedPayloadSchema,
+  targetId: ClientIdSchema,
+  type: z.literal("RELAY_SEND"),
 });
 
 export type ClientRelaySendMessage = z.infer<

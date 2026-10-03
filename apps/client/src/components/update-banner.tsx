@@ -1,3 +1,5 @@
+import type { FC } from "react";
+
 import {
   Button,
   Dialog,
@@ -8,13 +10,12 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { IconCheck, IconDownload, IconRotate } from "@tabler/icons-react";
-import type { FC } from "react";
 
 import { updaterService } from "../services/updater";
 import { useUpdaterStore } from "../stores/updater";
 
 export const UpdateBanner: FC = () => {
-  const { status, update, downloadProgress, dismissed } = useUpdaterStore();
+  const { dismissed, downloadProgress, status, update } = useUpdaterStore();
 
   const isVisible =
     !dismissed &&
@@ -22,13 +23,13 @@ export const UpdateBanner: FC = () => {
 
   return (
     <Dialog
-      opened={isVisible}
       onClose={() => updaterService.dismiss()}
+      opened={isVisible}
       position={{ bottom: 16, right: 16 }}
       radius={"md"}
       shadow={"lg"}
       size={"md"}
-      transitionProps={{ transition: "slide-up", duration: 200 }}
+      transitionProps={{ duration: 200, transition: "slide-up" }}
       withBorder
       withCloseButton={status !== "downloading"}
     >

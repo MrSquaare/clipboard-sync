@@ -1,10 +1,10 @@
 import type { ClientId } from "@clipboard-sync/shared/schemas/client";
 
-import { EventEmitter } from "../lib/event-emitter";
 import type { Message } from "../schemas/message";
-import { useClientsStore, type ClientTransportMode } from "../stores/clients";
-import { useSettingsStore } from "../stores/settings";
 
+import { EventEmitter } from "../lib/event-emitter";
+import { type ClientTransportMode, useClientsStore } from "../stores/clients";
+import { useSettingsStore } from "../stores/settings";
 import { Logger } from "./logger";
 import { p2pTransport, type P2PTransport } from "./p2p-transport";
 import { relayTransport, type RelayTransport } from "./relay-transport";
@@ -12,45 +12,27 @@ import { relayTransport, type RelayTransport } from "./relay-transport";
 const logger = new Logger("Transport");
 
 type TransportEventMap = {
-  transportMode: [senderId: ClientId, transportMode: ClientTransportMode];
   message: [
     senderId: ClientId,
     message: Message,
     transportMode: ClientTransportMode,
   ];
+  transportMode: [senderId: ClientId, transportMode: ClientTransportMode];
 };
 
 export class TransportService {
-  private readonly relay: RelayTransport;
-  private readonly p2p: P2PTransport;
   private readonly events = new EventEmitter<TransportEventMap>();
-
   on = this.events.on.bind(this.events);
+  private readonly p2p: P2PTransport;
 
-  initiate(clientId: ClientId): void {
-    if (this.transportMode === "relay") {
-      logger.debug("Skipping P2P connection (Relay mode)");
-      return;
-    }
+  private readonly relay: RelayTransport;
 
-    this.p2p.initiate(clientId);
+  private get clients() {
+    return useClientsStore.getState().list;
   }
 
-  initiateAll(clientIds: ClientId[]): void {
-    if (this.transportMode === "relay") {
-      logger.debug("Skipping P2P connections (Relay mode)");
-      return;
-    }
-
-    this.p2p.initiateAll(clientIds);
-  }
-
-  disconnect(clientId: ClientId): void {
-    this.p2p.disconnect(clientId);
-  }
-
-  disconnectAll(): void {
-    this.p2p.disconnectAll();
+  private get transportMode() {
+    return useSettingsStore.getState().transportMode;
   }
 
   constructor(relay: RelayTransport, p2p: P2PTransport) {
@@ -58,24 +40,6 @@ export class TransportService {
     this.p2p = p2p;
 
     this.setupEventHandlers();
-  }
-
-  private setupEventHandlers(): void {
-    this.relay.on("message", (senderId, message) => {
-      this.events.emit("message", senderId, message, "relay");
-    });
-
-    this.p2p.on("connected", (clientId) => {
-      this.events.emit("transportMode", clientId, "p2p");
-    });
-
-    this.p2p.on("disconnected", (clientId) => {
-      this.events.emit("transportMode", clientId, "relay");
-    });
-
-    this.p2p.on("message", (senderId, message) => {
-      this.events.emit("message", senderId, message, "p2p");
-    });
   }
 
   async broadcast(message: Message): Promise<void> {
@@ -106,6 +70,34 @@ export class TransportService {
     }
   }
 
+  disconnect(clientId: ClientId): void {
+    this.p2p.disconnect(clientId);
+  }
+
+  disconnectAll(): void {
+    this.p2p.disconnectAll();
+  }
+
+  initiate(clientId: ClientId): void {
+    if (this.transportMode === "relay") {
+      logger.debug("Skipping P2P connection (Relay mode)");
+
+      return;
+    }
+
+    this.p2p.initiate(clientId);
+  }
+
+  initiateAll(clientIds: ClientId[]): void {
+    if (this.transportMode === "relay") {
+      logger.debug("Skipping P2P connections (Relay mode)");
+
+      return;
+    }
+
+    this.p2p.initiateAll(clientIds);
+  }
+
   async sendTo(clientId: ClientId, message: Message): Promise<void> {
     const transportMode = this.transportMode;
 
@@ -114,6 +106,7 @@ export class TransportService {
 
       if (sentP2P) {
         logger.debug(`Sent ${message.type} to ${clientId} via P2P`);
+
         return;
       }
     }
@@ -125,12 +118,22 @@ export class TransportService {
     }
   }
 
-  private get clients() {
-    return useClientsStore.getState().list;
-  }
+  private setupEventHandlers(): void {
+    this.relay.on("message", (senderId, message) => {
+      this.events.emit("message", senderId, message, "relay");
+    });
 
-  private get transportMode() {
-    return useSettingsStore.getState().transportMode;
+    this.p2p.on("connected", (clientId) => {
+      this.events.emit("transportMode", clientId, "p2p");
+    });
+
+    this.p2p.on("disconnected", (clientId) => {
+      this.events.emit("transportMode", clientId, "relay");
+    });
+
+    this.p2p.on("message", (senderId, message) => {
+      this.events.emit("message", senderId, message, "p2p");
+    });
   }
 }
 

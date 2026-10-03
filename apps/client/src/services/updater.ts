@@ -1,16 +1,16 @@
-import { relaunch } from "@tauri-apps/plugin-process";
 import type { Update } from "@tauri-apps/plugin-updater";
+
+import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 
 import { useSettingsStore } from "../stores/settings";
 import { useUpdaterStore } from "../stores/updater";
-
 import { Logger } from "./logger";
 
 const logger = new Logger("Updater");
 
 export class UpdaterService {
-  async check(manual = false): Promise<Update | null> {
+  async check(manual = false): Promise<null | Update> {
     const { updateChannel } = useSettingsStore.getState();
     const updaterStore = useUpdaterStore.getState();
 
@@ -50,6 +50,10 @@ export class UpdaterService {
     }
   }
 
+  dismiss(): void {
+    useUpdaterStore.getState().setDismissed(true);
+  }
+
   async downloadAndInstall(): Promise<void> {
     const { update } = useUpdaterStore.getState();
 
@@ -62,8 +66,8 @@ export class UpdaterService {
     updaterStore.setStatus("downloading");
     updaterStore.setError(null);
     updaterStore.setProgress({
-      downloadProgress: 0,
       downloadedBytes: 0,
+      downloadProgress: 0,
       totalBytes: 0,
     });
 
@@ -78,8 +82,8 @@ export class UpdaterService {
           totalBytes = event.data.contentLength ?? 0;
 
           useUpdaterStore.getState().setProgress({
-            downloadProgress: 0,
             downloadedBytes: 0,
+            downloadProgress: 0,
             totalBytes,
           });
         } else if (event.event === "Progress") {
@@ -90,14 +94,14 @@ export class UpdaterService {
               : 0;
 
           useUpdaterStore.getState().setProgress({
-            downloadProgress,
             downloadedBytes,
+            downloadProgress,
             totalBytes,
           });
         } else if (event.event === "Finished") {
           useUpdaterStore.getState().setProgress({
-            downloadProgress: 100,
             downloadedBytes,
+            downloadProgress: 100,
             totalBytes,
           });
         }
@@ -116,6 +120,10 @@ export class UpdaterService {
     }
   }
 
+  reset(): void {
+    useUpdaterStore.getState().reset();
+  }
+
   async restart(): Promise<void> {
     try {
       logger.info("Restarting application");
@@ -131,14 +139,6 @@ export class UpdaterService {
       useUpdaterStore.getState().setStatus("error");
       useUpdaterStore.getState().setError(message);
     }
-  }
-
-  dismiss(): void {
-    useUpdaterStore.getState().setDismissed(true);
-  }
-
-  reset(): void {
-    useUpdaterStore.getState().reset();
   }
 }
 

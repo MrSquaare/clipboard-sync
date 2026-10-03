@@ -1,21 +1,21 @@
 import type { UpdateServerChannel } from "@clipboard-sync/shared/schemas/update-server";
 
 export type GitHubAsset = {
-  name: string;
   browser_download_url: string;
+  name: string;
 };
 
 export type GitHubRelease = {
-  tag_name: string;
-  name: string | null;
-  draft: boolean;
-  prerelease: boolean;
   assets: GitHubAsset[];
+  draft: boolean;
+  name: null | string;
+  prerelease: boolean;
+  tag_name: string;
 };
 
 export type GitHubResolvedUpdateUrl = {
-  url: string;
   tag: string;
+  url: string;
 };
 
 export class GitHubService {
@@ -36,13 +36,13 @@ export class GitHubService {
         : `https://api.github.com/repos/${this.owner}/${this.repo}/releases?per_page=1`;
 
     const response = await fetch(url, {
-      headers: {
-        "User-Agent": "clipboard-sync-update-server",
-        Accept: "application/vnd.github.v3+json",
-      },
       cf: {
-        cacheTtl: 60,
         cacheEverything: true,
+        cacheTtl: 60,
+      },
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "clipboard-sync-update-server",
       },
     });
 
@@ -84,8 +84,8 @@ export class GitHubService {
 
     if (latestJsonAsset) {
       return {
-        url: latestJsonAsset.browser_download_url,
         tag: release.tag_name,
+        url: latestJsonAsset.browser_download_url,
       };
     }
 

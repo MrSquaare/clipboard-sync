@@ -1,22 +1,23 @@
+import type { ReactNode } from "react";
+
 import { Alert, Button, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { Component } from "react";
-import type { ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
 }
 
 interface State {
-  hasError: boolean;
   error: Error | null;
+  hasError: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+  state: State = { error: null, hasError: false };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { error, hasError: true };
   }
 
   handleReload = (): void => {

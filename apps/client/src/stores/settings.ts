@@ -1,6 +1,7 @@
 import type { ClientName } from "@clipboard-sync/shared/schemas/client";
 import type { ServerRoomID } from "@clipboard-sync/shared/schemas/server";
 import type { UpdateServerChannel } from "@clipboard-sync/shared/schemas/update-server";
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -9,53 +10,53 @@ import {
   DEFAULT_POLLING_INTERVAL_MS,
 } from "../constants";
 
-export type SettingsTransportMode = "auto" | "p2p" | "relay";
+export type SettingsStoreActions = {
+  reset: () => void;
+  update: (settings: Partial<SettingsStoreState>) => void;
+};
 
 export type SettingsStoreState = {
-  serverUrl: string;
-  clientName: ClientName;
-  roomId: ServerRoomID;
-  transportMode: SettingsTransportMode;
-  saveSecret: boolean;
   autoConnectOnStart: boolean;
+  clientName: ClientName;
+  developerMode: boolean;
   minimizeOnClose: boolean;
   minimizeOnStart: boolean;
+  notifyOnUpdate: boolean;
   pingInterval: number;
   pollingInterval: number;
-  developerMode: boolean;
+  roomId: ServerRoomID;
+  saveSecret: boolean;
+  serverUrl: string;
+  transportMode: SettingsTransportMode;
   updateChannel: UpdateServerChannel;
-  notifyOnUpdate: boolean;
 };
 
-export type SettingsStoreActions = {
-  update: (settings: Partial<SettingsStoreState>) => void;
-  reset: () => void;
-};
+export type SettingsTransportMode = "auto" | "p2p" | "relay";
 
 const initialState: SettingsStoreState = {
-  serverUrl: __DEFAULT_SERVER_URL__,
-  clientName: "",
-  roomId: "",
-  transportMode: "auto",
-  saveSecret: false,
   autoConnectOnStart: false,
+  clientName: "",
+  developerMode: false,
   minimizeOnClose: false,
   minimizeOnStart: false,
+  notifyOnUpdate: true,
   pingInterval: DEFAULT_PING_INTERVAL_MS,
   pollingInterval: DEFAULT_POLLING_INTERVAL_MS,
-  developerMode: false,
+  roomId: "",
+  saveSecret: false,
+  serverUrl: __DEFAULT_SERVER_URL__,
+  transportMode: "auto",
   updateChannel: "release",
-  notifyOnUpdate: true,
 };
 
 export const useSettingsStore = create<
-  SettingsStoreState & SettingsStoreActions
+  SettingsStoreActions & SettingsStoreState
 >()(
   persist(
     (set) => ({
       ...initialState,
-      update: (partial) => set(partial),
       reset: () => set(initialState),
+      update: (partial) => set(partial),
     }),
     { name: "clipboard-sync-settings" },
   ),

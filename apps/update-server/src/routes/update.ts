@@ -1,4 +1,5 @@
 import type { LoggerMiddlewareVariables } from "@clipboard-sync/shared/hono/middleware/logger";
+
 import { loggerMiddleware } from "@clipboard-sync/shared/hono/middleware/logger";
 import { UpdateServerChannelSchema } from "@clipboard-sync/shared/schemas/update-server";
 import { Hono } from "hono";
@@ -18,8 +19,8 @@ export const updateApp = new Hono<{
 
     if (!channelResult.success) {
       c.var.logger.warn("Invalid update channel", {
-        rawChannel,
         error: channelResult.error,
+        rawChannel,
       });
 
       return c.text(

@@ -17,11 +17,11 @@ export const ServerRoomIDSchema = z.preprocess(
 export type ServerRoomID = z.infer<typeof ServerRoomIDSchema>;
 
 export const ServerHelloMessageSchema = z.object({
-  type: z.literal("WELCOME"),
   payload: z.object({
     clientId: ClientIdSchema,
     clients: z.array(ClientInfoSchema),
   }),
+  type: z.literal("WELCOME"),
 });
 
 export type ServerHelloMessage = z.infer<typeof ServerHelloMessageSchema>;
@@ -35,8 +35,8 @@ export type ServerHeartbeatMessage = z.infer<
 >;
 
 export const ServerClientJoinedMessageSchema = z.object({
-  type: z.literal("CLIENT_JOINED"),
   payload: ClientInfoSchema,
+  type: z.literal("CLIENT_JOINED"),
 });
 
 export type ServerClientJoinedMessage = z.infer<
@@ -44,8 +44,8 @@ export type ServerClientJoinedMessage = z.infer<
 >;
 
 export const ServerClientLeftMessageSchema = z.object({
-  type: z.literal("CLIENT_LEFT"),
   payload: ClientInfoSchema,
+  type: z.literal("CLIENT_LEFT"),
 });
 
 export type ServerClientLeftMessage = z.infer<
@@ -53,9 +53,9 @@ export type ServerClientLeftMessage = z.infer<
 >;
 
 export const ServerRelayBroadcastMessageSchema = z.object({
-  type: z.literal("RELAY_BROADCAST"),
-  senderId: ClientIdSchema,
   payload: ClientEncryptedPayloadSchema,
+  senderId: ClientIdSchema,
+  type: z.literal("RELAY_BROADCAST"),
 });
 
 export type ServerRelayBroadcastMessage = z.infer<
@@ -63,9 +63,9 @@ export type ServerRelayBroadcastMessage = z.infer<
 >;
 
 export const ServerRelaySendMessageSchema = z.object({
-  type: z.literal("RELAY_SEND"),
-  senderId: ClientIdSchema,
   payload: ClientEncryptedPayloadSchema,
+  senderId: ClientIdSchema,
+  type: z.literal("RELAY_SEND"),
 });
 
 export type ServerRelaySendMessage = z.infer<
@@ -73,10 +73,10 @@ export type ServerRelaySendMessage = z.infer<
 >;
 
 export const ServerErrorMessageSchema = z.object({
-  type: z.literal("ERROR"),
   payload: z.object({
     message: z.string(),
   }),
+  type: z.literal("ERROR"),
 });
 
 export type ServerErrorMessage = z.infer<typeof ServerErrorMessageSchema>;

@@ -1,5 +1,6 @@
-import { Center, Loader } from "@mantine/core";
 import type { FC } from "react";
+
+import { Center, Loader } from "@mantine/core";
 
 export const LoadingOverlay: FC = () => {
   return (

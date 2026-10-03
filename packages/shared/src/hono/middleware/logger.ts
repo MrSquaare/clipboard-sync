@@ -2,12 +2,12 @@ import { createMiddleware } from "hono/factory";
 
 import { Logger, type LogLevel } from "../../utils/logger";
 
-export type LoggerMiddlewareVariables = {
-  logger: Logger;
-};
-
 export type LoggerMiddlewareBindings = {
   LOG_LEVEL: LogLevel;
+};
+
+export type LoggerMiddlewareVariables = {
+  logger: Logger;
 };
 
 export const loggerMiddleware = <

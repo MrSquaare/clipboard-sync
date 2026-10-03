@@ -1,4 +1,5 @@
 import type { LoggerMiddlewareVariables } from "@clipboard-sync/shared/hono/middleware/logger";
+
 import { loggerMiddleware } from "@clipboard-sync/shared/hono/middleware/logger";
 import { ServerRoomIDSchema } from "@clipboard-sync/shared/schemas/server";
 import { Hono } from "hono";
@@ -16,8 +17,8 @@ export const wsApp = new Hono<{
 
     if (!result.success) {
       c.var.logger.error("Invalid roomId", {
-        rawRoomId,
         error: result.error,
+        rawRoomId,
       });
 
       return c.text(result.error.message, 400);

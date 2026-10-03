@@ -7,11 +7,10 @@ import type {
 } from "@clipboard-sync/shared/schemas/server";
 
 import {
-  useClientsStore,
   type Client,
   type ClientTransportMode,
+  useClientsStore,
 } from "../stores/clients";
-
 import { Logger } from "./logger";
 import { transportService, type TransportService } from "./transport";
 import { websocketService, WebSocketService } from "./websocket";
@@ -19,11 +18,11 @@ import { websocketService, WebSocketService } from "./websocket";
 const logger = new Logger("Clients");
 
 export class ClientsService {
-  private readonly ws: WebSocketService;
   private readonly transport: TransportService;
+  private readonly ws: WebSocketService;
 
-  reset(): void {
-    this.clientsStore.reset();
+  private get clientsStore() {
+    return useClientsStore.getState();
   }
 
   constructor(ws: WebSocketService, transport: TransportService) {
@@ -33,27 +32,63 @@ export class ClientsService {
     this.setupEventHandlers();
   }
 
-  private setupEventHandlers(): void {
-    this.ws.on("message", (message) => {
-      this.handleMessage(message);
+  reset(): void {
+    this.clientsStore.reset();
+  }
+
+  private handleClientJoined(message: ServerClientJoinedMessage): void {
+    const { id, name } = message.payload;
+
+    logger.info(`Client joined: ${name} (${id})`);
+
+    const existing = this.clientsStore.getById(id);
+
+    if (existing) {
+      logger.warn(`Client ${id} already exists, updating`);
+
+      this.clientsStore.update(id, { name: name });
+
+      return;
+    }
+
+    this.clientsStore.add({
+      id: id,
+      name: name,
+      transport: "relay",
     });
-    this.transport.on("transportMode", (senderId, transportMode) => {
-      this.handleTransportMode(senderId, transportMode);
-    });
+  }
+
+  private handleClientLeft(message: ServerClientLeftMessage): void {
+    const { id, name } = message.payload;
+
+    logger.info(`Client left: ${name} (${id})`);
+
+    this.clientsStore.remove(id);
+    this.transport.disconnect(id);
   }
 
   private handleMessage(message: ServerMessage): void {
     switch (message.type) {
-      case "WELCOME":
-        this.handleWelcome(message);
-        break;
       case "CLIENT_JOINED":
         this.handleClientJoined(message);
+
         break;
       case "CLIENT_LEFT":
         this.handleClientLeft(message);
+
+        break;
+      case "WELCOME":
+        this.handleWelcome(message);
+
         break;
     }
+  }
+
+  private handleTransportMode(
+    clientId: ClientId,
+    transportMode: ClientTransportMode,
+  ): void {
+    this.clientsStore.update(clientId, { transport: transportMode });
   }
 
   private handleWelcome(message: ServerHelloMessage): void {
@@ -75,45 +110,13 @@ export class ClientsService {
     this.transport.initiateAll(clientIds);
   }
 
-  private handleClientJoined(message: ServerClientJoinedMessage): void {
-    const { id, name } = message.payload;
-
-    logger.info(`Client joined: ${name} (${id})`);
-
-    const existing = this.clientsStore.getById(id);
-
-    if (existing) {
-      logger.warn(`Client ${id} already exists, updating`);
-
-      this.clientsStore.update(id, { name: name });
-      return;
-    }
-
-    this.clientsStore.add({
-      id: id,
-      name: name,
-      transport: "relay",
+  private setupEventHandlers(): void {
+    this.ws.on("message", (message) => {
+      this.handleMessage(message);
     });
-  }
-
-  private handleClientLeft(message: ServerClientLeftMessage): void {
-    const { id, name } = message.payload;
-
-    logger.info(`Client left: ${name} (${id})`);
-
-    this.clientsStore.remove(id);
-    this.transport.disconnect(id);
-  }
-
-  private handleTransportMode(
-    clientId: ClientId,
-    transportMode: ClientTransportMode,
-  ): void {
-    this.clientsStore.update(clientId, { transport: transportMode });
-  }
-
-  private get clientsStore() {
-    return useClientsStore.getState();
+    this.transport.on("transportMode", (senderId, transportMode) => {
+      this.handleTransportMode(senderId, transportMode);
+    });
   }
 }
 

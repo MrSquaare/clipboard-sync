@@ -1,5 +1,4 @@
 import "@mantine/core/styles.css";
-
 import { MantineProvider } from "@mantine/core";
 import { attachConsole } from "@tauri-apps/plugin-log";
 import { type FC } from "react";
@@ -21,7 +20,7 @@ const AppContent: FC = () => {
   useWindowBehavior();
   useAutoUpdater();
 
-  if (["reconnecting", "disconnecting"].includes(status)) {
+  if (["disconnecting", "reconnecting"].includes(status)) {
     return <LoadingOverlay />;
   }
 

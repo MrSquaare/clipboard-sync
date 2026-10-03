@@ -1,38 +1,39 @@
 import type { ClientId } from "@clipboard-sync/shared/schemas/client";
+
 import { create } from "zustand";
 
 export type ConnectionStatus =
-  | "connecting"
-  | "reconnecting"
   | "connected"
+  | "connecting"
+  | "disconnected"
   | "disconnecting"
-  | "disconnected";
+  | "reconnecting";
+
+export type ConnectionStoreActions = {
+  reset: () => void;
+  setClientId: (id: ClientId | null) => void;
+  setError: (error: null | string) => void;
+  setStatus: (status: ConnectionStatus) => void;
+};
 
 export type ConnectionStoreState = {
   clientId: ClientId | null;
+  error: null | string;
   status: ConnectionStatus;
-  error: string | null;
-};
-
-export type ConnectionStoreActions = {
-  setClientId: (id: ClientId | null) => void;
-  setStatus: (status: ConnectionStatus) => void;
-  setError: (error: string | null) => void;
-  reset: () => void;
 };
 
 const initialState: ConnectionStoreState = {
   clientId: null,
-  status: "disconnected",
   error: null,
+  status: "disconnected",
 };
 
 export const useConnectionStore = create<
-  ConnectionStoreState & ConnectionStoreActions
+  ConnectionStoreActions & ConnectionStoreState
 >((set) => ({
   ...initialState,
-  setClientId: (clientId) => set({ clientId }),
-  setStatus: (status) => set({ status }),
-  setError: (error) => set({ error }),
   reset: () => set(initialState),
+  setClientId: (clientId) => set({ clientId }),
+  setError: (error) => set({ error }),
+  setStatus: (status) => set({ status }),
 }));

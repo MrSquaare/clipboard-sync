@@ -1,30 +1,31 @@
+import type { UseFormReturnType } from "@mantine/form";
+import type { FC } from "react";
+
 import {
-  TextInput,
-  PasswordInput,
+  ActionIcon,
   Button,
-  Stack,
   Checkbox,
   Group,
-  ActionIcon,
+  PasswordInput,
+  Stack,
+  TextInput,
 } from "@mantine/core";
-import type { UseFormReturnType } from "@mantine/form";
 import { IconKey, IconLock, IconUser, IconX } from "@tabler/icons-react";
-import type { FC } from "react";
 
 import type { ConnectionFormValues } from "../../schemas/connection-form";
 
 export type ConnectionFormProps = {
   form: UseFormReturnType<ConnectionFormValues>;
-  onSubmit: (values: ConnectionFormValues) => void;
-  onResetClientName: () => void;
   loading: boolean;
+  onResetClientName: () => void;
+  onSubmit: (values: ConnectionFormValues) => void;
 };
 
 export const ConnectionForm: FC<ConnectionFormProps> = ({
   form,
-  onSubmit,
-  onResetClientName,
   loading,
+  onResetClientName,
+  onSubmit,
 }) => {
   const handleSaveSecretChange = (checked: boolean) => {
     form.setFieldValue("saveSecret", checked);

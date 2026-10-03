@@ -1,15 +1,15 @@
 import { z } from "zod";
 
 export const PeerOfferMessageSchema = z.object({
-  type: z.literal("PEER_OFFER"),
   sdp: z.string().optional(),
+  type: z.literal("PEER_OFFER"),
 });
 
 export type PeerOfferMessage = z.infer<typeof PeerOfferMessageSchema>;
 
 export const PeerAnswerMessageSchema = z.object({
-  type: z.literal("PEER_ANSWER"),
   sdp: z.string().optional(),
+  type: z.literal("PEER_ANSWER"),
 });
 
 export type PeerAnswerMessage = z.infer<typeof PeerAnswerMessageSchema>;
@@ -22,8 +22,8 @@ export const PeerIceCandidateSchema = z.object({
 });
 
 export const PeerIceMessageSchema = z.object({
-  type: z.literal("PEER_ICE"),
   candidate: PeerIceCandidateSchema.nullable(),
+  type: z.literal("PEER_ICE"),
 });
 
 export type PeerIceMessage = z.infer<typeof PeerIceMessageSchema>;
