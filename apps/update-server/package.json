@@ -7,8 +7,8 @@
     "build": "rm -rf dist && tsc",
     "deploy": "wrangler deploy --minify --env=''",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write .",
+    "check": "eslint . && prettier . --check",
+    "check:fix": "eslint . --fix && prettier . --write",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -16,8 +16,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@clipboard-sync/eslint-config": "workspace:*",
     "@clipboard-sync/shared": "workspace:*",
+    "@clipboard-sync/shared-config": "workspace:*",
     "@cloudflare/vite-plugin": "^1.62.5",
     "@cloudflare/workers-types": "^5.20261002.1",
     "@eslint/js": "^10.0.1",

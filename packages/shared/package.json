@@ -16,8 +16,8 @@
   "scripts": {
     "dev": "tsdown --watch",
     "build": "tsdown",
-    "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write .",
+    "check": "eslint . && prettier . --check",
+    "check:fix": "eslint . --fix && prettier . --write",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -25,7 +25,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@clipboard-sync/eslint-config": "workspace:*",
+    "@clipboard-sync/shared-config": "workspace:*",
     "eslint": "^10.11.0",
     "prettier": "^3.9.9",
     "tsdown": "^0.23.0",

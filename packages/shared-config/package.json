@@ -1,23 +1,25 @@
 {
   "private": true,
-  "name": "@clipboard-sync/eslint-config",
-  "main": "./index.js",
+  "name": "@clipboard-sync/shared-config",
   "type": "module",
+  "exports": {
+    "./eslint": "./src/eslint.js"
+  },
   "scripts": {
-    "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write ."
+    "check": "eslint . && prettier . --check",
+    "check:fix": "eslint . --fix && prettier . --write"
   },
   "peerDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint-config-prettier": "^10.1.8",
+    "@stylistic/eslint-plugin": "^5.10.0",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-perfectionist": "^5.12.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.0"
   },
   "devDependencies": {
     "eslint": "^10.11.0",
-    "jiti": "^2.7.0",
     "prettier": "^3.9.9"
   }
 }
