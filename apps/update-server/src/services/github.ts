@@ -27,20 +27,28 @@ export class GitHubService {
     this.repo = repo;
   }
 
-  async getReleases(): Promise<GitHubRelease[]> {
-    const response = await fetch(
-      `https://api.github.com/repos/${this.owner}/${this.repo}/releases?per_page=20`,
-      {
-        headers: {
-          "User-Agent": "clipboard-sync-update-server",
-          Accept: "application/vnd.github.v3+json",
-        },
-        cf: {
-          cacheTtl: 60,
-          cacheEverything: true,
-        },
+  async getLatestRelease(
+    channel: UpdateServerChannel,
+  ): Promise<GitHubRelease | null> {
+    const url =
+      channel === "release"
+        ? `https://api.github.com/repos/${this.owner}/${this.repo}/releases/latest`
+        : `https://api.github.com/repos/${this.owner}/${this.repo}/releases?per_page=1`;
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "clipboard-sync-update-server",
+        Accept: "application/vnd.github.v3+json",
       },
-    );
+      cf: {
+        cacheTtl: 60,
+        cacheEverything: true,
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
 
     if (!response.ok) {
       throw new Error(
@@ -48,33 +56,37 @@ export class GitHubService {
       );
     }
 
-    return response.json<GitHubRelease[]>();
+    if (channel === "release") {
+      return response.json<GitHubRelease>();
+    }
+
+    const releases = await response.json<GitHubRelease[]>();
+
+    return releases[0] ?? null;
   }
 
   async resolveUpdateUrl(
     channel: UpdateServerChannel,
   ): Promise<GitHubResolvedUpdateUrl | null> {
-    const releases = await this.getReleases();
+    const release = await this.getLatestRelease(channel);
 
-    for (const release of releases) {
-      if (release.draft) {
-        continue;
-      }
+    if (!release || release.draft) {
+      return null;
+    }
 
-      if (channel === "release" && release.prerelease) {
-        continue;
-      }
+    if (channel === "release" && release.prerelease) {
+      return null;
+    }
 
-      const latestJsonAsset = release.assets.find(
-        (asset) => asset.name === "latest.json",
-      );
+    const latestJsonAsset = release.assets.find(
+      (asset) => asset.name === "latest.json",
+    );
 
-      if (latestJsonAsset) {
-        return {
-          url: latestJsonAsset.browser_download_url,
-          tag: release.tag_name,
-        };
-      }
+    if (latestJsonAsset) {
+      return {
+        url: latestJsonAsset.browser_download_url,
+        tag: release.tag_name,
+      };
     }
 
     return null;
